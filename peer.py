@@ -25,7 +25,7 @@ import argparse
 
 # Named tuples have (immutable) class-like semantics for accessing fields, but are straightforward to pickle/unpickle.
 # The following types are for important data whose contents and format should be relatively stable at this point.
-PeerData = namedtuple('PeerData', 'ip_address, store_revisions')
+PeerData = namedtuple('PeerData', 'network_address, store_revisions')
 StoreData = namedtuple('StoreData', 'revision_data, peers')
 RevisionData = namedtuple('RevisionData', 'revision_number, store_hash, signature')
 Metadata = namedtuple('Metadata', 'peer_id, peer_dict, store_id, store_dict, aes_key, aes_iv, merkel_tree')
@@ -85,7 +85,7 @@ class Peer:
   def run(self, client_sleep_time=5):
     """Start operating as a both a peer client and peer server."""
     # Do preliminary updates before coming online
-    self.update_ip_address()
+    self.update_network_address()
     self.check_store()
         
     peer_server_thread = threading.Thread(target=self.run_peer_server, args=())
@@ -117,7 +117,7 @@ class Peer:
         try:        
           self.debug_print( [(1, 'Attempting to connect to peer server.'),
                              (2, 'server_peer_id = {}'.format([server_peer_id])),
-                             (2, 'ip_address = {}'.format(self.peer_dict[server_peer_id].ip_address))] )
+                             (2, 'network_address = {}'.format(self.peer_dict[server_peer_id].network_address))] )
           self.lock.acquire()
           skt_ssl = self.connect_to_peer(server_peer_id, socket_timeout)
           try:
@@ -149,7 +149,7 @@ class Peer:
       time.sleep(sleep_time)
       self.debug_print( (1, 'Peer client mode waking up.') )
       self.check_store() # FIXME: This is an intensive operation. Instead watch the filesystem for changes and mark with a "dirty" flag.
-      self.update_ip_address()
+      self.update_network_address()
 
     
      
@@ -161,12 +161,12 @@ class Peer:
       self.debug_print( (1, 'Waiting for a peer client to connect.') )
       # TODO: Will want to deal with multiple peer clients eventually.
       try:
-        skt_raw, (peer_ip, _) = skt_listener.accept()
+        skt_raw, (peer_address, _) = skt_listener.accept()
         self.lock.acquire()        
-        self.debug_print( (1, 'Connected to a peer client from \'{}\'. Initiating peer server session.'.format(peer_ip)))      
+        self.debug_print( (1, 'Connected to a peer client from \'{}\'. Initiating peer server session.'.format(peer_address)))      
         skt_ssl = ssl.wrap_socket(skt_raw, server_side=True, keyfile=self.private_key_file, certfile=self.x509_cert_file, ssl_version=ssl.PROTOCOL_SSLv3)
         try:
-          self.peer_server_session(skt_ssl, peer_ip)
+          self.peer_server_session(skt_ssl, peer_address)
         except socket.error:
           self.debug_print( (1, 'Disconnected from peer client due to socket error.') )
         except ManualDisconnectException:
@@ -189,7 +189,7 @@ class Peer:
             pass
       
 
-  def peer_server_session(self, skt_ssl, peer_ip):
+  def peer_server_session(self, skt_ssl, peer_address):
     self.debug_print( (2, 'Waiting for peer client\'s handshake message.'))    
     pickled_payload = self.receive_expected_message(skt_ssl, 'handshake_msg')
     (client_peer_id, client_peer_dict) = self.unpickle('handshake_msg', pickled_payload)
@@ -346,7 +346,7 @@ class Peer:
     
     peer_id = self.generate_peer_id()
     store_id = self.generate_store_id()    
-    ip_address = None # Automatically set upon running the peer
+    network_address = None # Automatically set upon running the peer
     own_revision_data = INVALID_REVISION # Automatically updated upon running the peer.
     merkel_tree = None # Running the peer will cause a check of the store which will populate this and sign a new revision
     initial_peers = set([peer_id])
@@ -354,7 +354,7 @@ class Peer:
     aes_iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
     
     # FIXME: Idempotently initialize/ensure personal directory structure here including initial revision number.
-    peer_dict = {peer_id: PeerData(ip_address, {store_id: own_revision_data})}
+    peer_dict = {peer_id: PeerData(network_address, {store_id: own_revision_data})}
     store_dict = {store_id: StoreData(own_revision_data, initial_peers)}
     
     # Load the initial values into a `Metadata` object.
@@ -585,8 +585,8 @@ class Peer:
     return self._metadata
   
   @property
-  def ip_address(self):
-    return self.peer_dict[self.peer_id].ip_address
+  def network_address(self):
+    return self.peer_dict[self.peer_id].network_address
 
   def get_revision_data(self, peer_id, store_id):
     revision_data = self.peer_dict[peer_id].store_revisions[store_id]
@@ -723,11 +723,11 @@ class Peer:
     
     # Prepare an empty record if the peer wasn't already known.
     if not (peer_id in self.peer_dict.keys()):
-      ip_address = None
+      network_address = None
       store_revisions = dict()
     # Otherwise, work from existing knowledge of the peer.
     else:
-      ip_address = peer_dict[peer_id].ip_address
+      network_address = peer_dict[peer_id].network_address
       store_revisions = peer_dict[peer_id].store_revisions
       
     # Record the peer's associations with only the stores we care about.
@@ -742,11 +742,11 @@ class Peer:
     
     # FIXME
     # Again, peers are unaware of their own IP addresses, so only take valid changes thereof
-    if peer_data.ip_address:
-      ip_address = peer_data.ip_address
+    if peer_data.network_address:
+      network_address = peer_data.network_address
     
     # Enact the update.
-    peer_dict[peer_id] = PeerData(ip_address, store_revisions)
+    peer_dict[peer_id] = PeerData(network_address, store_revisions)
     metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.aes_key, self.aes_iv, self.merkel_tree)
     self.update_metadata(metadata, True)
 
@@ -813,7 +813,7 @@ class Peer:
 #       self.lock.release()
     
     
-  def update_ip_address(self, lock=False):
+  def update_network_address(self, lock=False):
     """Update this peer's already existing IP address data."""
     # Make sure we have the lock before proceeding
 #     if not lock:
@@ -824,8 +824,8 @@ class Peer:
     
     # Get and store the IP address
     # FIXME: Would like to sign this data (probably the whole `PeerData` object).
-    ip_address = json.load(urlopen('http://httpbin.org/ip'))['origin']
-    peer_data = PeerData(ip_address, peer_dict[self.peer_id].store_revisions)
+    network_address = json.load(urlopen('http://httpbin.org/ip'))['origin']
+    peer_data = PeerData(network_address, peer_dict[self.peer_id].store_revisions)
     peer_dict[self.peer_id] = peer_data
     
     # Enact the change.
@@ -865,7 +865,7 @@ class Peer:
       peer_store_revisions[store_id] = INVALID_REVISION
     
     # Enact the changes
-    peer_data = PeerData(self.peer_dict[peer_id].ip_address, peer_store_revisions)
+    peer_data = PeerData(self.peer_dict[peer_id].network_address, peer_store_revisions)
     self.record_peer_data(peer_id, peer_data, True)
 
     # Release the lock if we personally acquired it
@@ -883,10 +883,10 @@ class Peer:
     store_dict[store_id] = StoreData(revision_data=revision_data, peers=store_dict[store_id].peers.union(set([self.peer_id])))
     
     # Also modify our own entry in the peer dictionary so we can gossip to other peers about the new revision.
-    ip_address = self.peer_dict[self.peer_id].ip_address
+    network_address = self.peer_dict[self.peer_id].network_address
     store_revisions = copy.deepcopy(self.peer_dict[self.peer_id].store_revisions)
     store_revisions[store_id] = revision_data
-    peer_data = PeerData(ip_address, store_revisions)
+    peer_data = PeerData(network_address, store_revisions)
     self.record_peer_data(self.peer_id, peer_data)
     
     # Enact the change
@@ -1231,11 +1231,11 @@ class Peer:
   
   def connect_to_peer(self, peer_id, timeout=5):
     # TODO: Raises `KeyError` exception on invalid UUID.
-    peer_ip = self.peer_dict[peer_id].ip_address
+    peer_address = self.peer_dict[peer_id].network_address
     # FIXME: Want to verify peer server's public key
     skt = ssl.wrap_socket( socket.socket(socket.AF_INET, socket.SOCK_STREAM), ssl_version=ssl.PROTOCOL_SSLv3)
     skt.settimeout(timeout)
-    skt.connect((peer_ip, self.listening_port))
+    skt.connect((peer_address, self.listening_port))
     return skt
   
   
@@ -1700,19 +1700,24 @@ class Peer:
   #################################
   # Debug and development methods #
   #################################
-  def export_public_configuration(self):
-    with open('strongbox_public_config.pickle', 'w') as f:
-      cPickle.dump( (self.peer_id, self.store_id, self.ip_address, self.public_key.exportKey()) , f)
-    self.debug_print( (1, 'Public configuration data written to file \'./strongbox_public_config.pickle\'.') )
+  def export_backup_configuration(self):
+    # Ensure we have a valid address to export
+    self.update_network_address()
+    with open('strongbox_backup_config.pickle', 'w') as f:
+      cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey()) , f)
+    self.debug_print( (1, 'Public configuration data written to file \'./strongbox_backup_config.pickle\'.') )
     
-  def import_public_configuration(self):
+  def import_backup_configuration(self, config_file=None):
     # TODO: Unify this and `manually_associate`.
-    if not os.path.isfile('strongbox_public_config.pickle'):
-      self.debug_print( (1, 'ERROR: File \'./strongbox_public_config.pickle\' not found.') )
+    if not config_file:
+      config_file = 'strongbox_backup_config.pickle'
+      
+    if not os.path.isfile(config_file):
+      self.debug_print( (1, 'ERROR: File \'./strongbox_backup_config.pickle\' not found.') )
       raise IOError()
     
-    with open('strongbox_public_config.pickle', 'r') as f:
-      peer_id, _, ip_address, public_key_contents = cPickle.load(f)
+    with open('strongbox_backup_config.pickle', 'r') as f:
+      peer_id, _, network_address, public_key_contents = cPickle.load(f)
     
     # Write the public key data to storage so `manually associate()` can get it.
     if not os.path.isfile(self.get_peer_key_path(peer_id)):
@@ -1720,10 +1725,10 @@ class Peer:
       with open(self.get_peer_key_path(peer_id), 'w') as f:
         f.write(public_key_contents)
       
-    self.manually_associate(peer_id, ip_address, self.get_peer_key_path(peer_id))
+    self.manually_associate(peer_id, network_address, self.get_peer_key_path(peer_id))
   
   # TODO: Generalize a subset of this functionality to support the future scenario where a central server would initiate such an association.
-  def manually_associate(self, peer_id, ip_address, public_key_file):
+  def manually_associate(self, peer_id, network_address, public_key_file):
     """
     Manually associate with a peer and prepare to be a backup for that peer's store.
     """
@@ -1771,7 +1776,7 @@ class Peer:
     if store_id not in store_revisions.keys():
       store_revisions[store_id] = None
       
-    peer_data = PeerData(ip_address, store_revisions)
+    peer_data = PeerData(network_address, store_revisions)
     
     # Create a copy of our `peer_dict` for staging changes and insert the new metadata.
     peer_dict = copy.deepcopy(self.peer_dict)
@@ -1779,13 +1784,13 @@ class Peer:
     
     # Ensure we are associated with the store.
     if store_id not in self.peer_dict[self.peer_id].store_revisions.keys():
-      ip_address = self.peer_dict[self.peer_id].ip_address
+      network_address = self.peer_dict[self.peer_id].network_address
       store_revisions = copy.deepcopy(self.peer_dict[self.peer_id].store_revisions)
       
       if store_id not in store_revisions.keys():
         store_revisions[store_id] = None
         
-      peer_data = PeerData(ip_address, store_revisions)
+      peer_data = PeerData(network_address, store_revisions)
       peer_dict[self.peer_id] = peer_data
     
     # Enact the changes.
@@ -1849,9 +1854,9 @@ class Peer:
   # Tests #
   #########
   
-  def test_client_ssl(self, peer_ip):
+  def test_client_ssl(self, peer_address):
     # FIXME: This modifies the metadata file, might not want such mangling
-    self.record_peer_ip(-1, peer_ip)
+    self.record_peer_address(-1, peer_address)
     s = self.connect_to_peer(-1)
     print 'Peer Client: Connected to peer, transmitting important data twice.'
     s.write('I\'m still here')
@@ -1872,12 +1877,12 @@ class Peer:
     skt_listener.close()
     
 
-  def test_client_handshake(self, peer_ip):
+  def test_client_handshake(self, peer_address):
     # Back up the existing metadata.
     metadata_backup = self.metadata
     
     # Inject a new peer.
-    test_peer_data = PeerData(ip_address=peer_ip, store_revisions={self.store_id: None})
+    test_peer_data = PeerData(network_address=peer_address, store_revisions={self.store_id: None})
     self.record_peer_data(-1, test_peer_data)
     
     skt_ssl = self.connect_to_peer(-1)
@@ -1899,10 +1904,10 @@ class Peer:
   def test_server_handshake(self):
     skt_listener = self.create_listening_socket()
     skt_listener.listen(1) # FIXME: Will need to deal with multiple peer clients eventually
-    skt_raw, (peer_ip, _) = skt_listener.accept()
+    skt_raw, (peer_address, _) = skt_listener.accept()
     skt_ssl = ssl.wrap_socket(skt_raw, server_side=True, keyfile=self.private_key_file, certfile=self.x509_cert_file, ssl_version=ssl.PROTOCOL_SSLv3)
     try:
-      self.peer_server_session(skt_ssl, peer_ip)
+      self.peer_server_session(skt_ssl, peer_address)
     except:
       skt_ssl.shutdown(socket.SHUT_RDWR)
       skt_ssl.close()
@@ -1953,7 +1958,7 @@ def demo_B():
 
 def demo_server():
   peer_server = Peer(debug_verbosity=2, debug_preamble='Server:')
-  peer_server.update_ip_address()
+  peer_server.update_network_address()
   peer_server.check_store()
   peer_server.run_peer_server()
   
@@ -1963,7 +1968,7 @@ def demo_client():
     peer_a_id = cPickle.load(f).peer_id
     
   peer_client.manually_associate(peer_a_id, 'ec2-54-87-72-190.compute-1.amazonaws.com', 'a_public_key.pem')
-  peer_client.update_ip_address()
+  peer_client.update_network_address()
   peer_client.check_store()
   peer_client.run_peer_client(3)
 
@@ -2022,8 +2027,8 @@ if __name__ == '__main__':
   group.add_argument('-i', '--init', action='store_true', help='Just initialize peer configuration, clearing any previous configuration if necessary.')
   group.add_argument('-c', '--peer-client', action='store_true', help='Run in peer client mode only.')
   group.add_argument('-s', '--peer-server', action='store_true', help='Run in peer server mode only.')
-  group.add_argument('--export-public', action='store_true', help='Export the public configuration data for this store and peer node so another node can become a backup for it.')
-  group.add_argument('--import-public', action='store_true', help='Import the public configuration data for another store and peer node and become a backup for the store.')
+  group.add_argument('--export-backup', action='store_true', help='Export the (public) configuration data another peer would need to act as a backup for your store.')
+  group.add_argument('--import-backup', action='store_true', help='Import the (public) configuration data needed to act as a backup for another store.')
   group.add_argument('--export-private', action='store_true', help='Export the private configuration data for this store so you can set up access to the store on another machine.')
   group.add_argument('--import-private', action='store_true', help='Import the private configuration data for your store generated on another machine.')
 
@@ -2039,9 +2044,9 @@ if __name__ == '__main__':
     demo_client()
   elif args.peer_server:
     demo_server()
-  elif args.export_public:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_public_configuration()
-  elif args.import_public:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_public_configuration()
+  elif args.export_backup:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_backup_configuration()
+  elif args.import_backup:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_backup_configuration()
   else:
     main()
