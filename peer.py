@@ -48,22 +48,32 @@ class Peer:
   # These are the goods, implemented at a higher level than the lower methods.
 
   def __init__(self,
-               own_store_directory=os.path.join(os.getcwd(), 'own_store'),
-               root_directory=os.getcwd(),
+               own_store_directory=None,
                debug_verbosity=0,
+               root_directory=os.getcwd(),
                debug_preamble=None,
                _metadata=None,
-               lock=threading.RLock()
+               lock=threading.RLock(),
+               shutdown_signaled=threading.Event()
                ):
     """Initialize a `Peer` object."""
     
     # Set any incoming overrides
-    self.own_store_directory = own_store_directory
+    if own_store_directory:
+      self.own_store_directory = own_store_directory
+    else:
+      self.own_store_directory = os.path.join(os.getcwd(), 'own_store')
+    if debug_verbosity:
+      self.debug_verbosity = debug_verbosity
+    else:
+      self.debug_verbosity = 0
+      
+    # TODO: Clear these out if not going to be overridden.
     self.root_directory = root_directory
-    self.debug_verbosity = debug_verbosity
     self.debug_preamble = debug_preamble
     self._metadata = _metadata
     self.lock = lock
+    self.shutdown_signaled = shutdown_signaled
     
     self.initialize_directory_structure()
         
@@ -78,16 +88,29 @@ class Peer:
     self.update_ip_address()
     self.check_store()
         
-    peer_client_thread = threading.Thread(target=self.run_peer_server, args=())
+    peer_server_thread = threading.Thread(target=self.run_peer_server, args=())
+    peer_server_thread.start()
+
+    peer_client_thread = threading.Thread(target=self.run_peer_client, args=())
     peer_client_thread.start()
-    self.run_peer_client()
+    try:
+      time.sleep(2**31) # Just over 68 years.
+    except (KeyboardInterrupt, SystemExit):
+      self.shutdown_signaled.set()
+      self.debug_print( (1, '\nShutdown signaled. Waiting for peer client and peer server threads to finish.') )
+      t_i = time.time()
+      peer_client_thread.join(15)
+      peer_server_thread.join(15-(time.time()-t_i))
+      if peer_client_thread.is_alive() or peer_server_thread.is_alive():
+        self.debug_print( (1, 'Shutdown taking too long, forcibly quitting.') )
+        exit(1)
+  
 
-
-  def run_peer_client(self, sleep_time=5, timeout=2):
+  def run_peer_client(self, sleep_time=5, socket_timeout=1):
     self.debug_print( (1, 'Peer client mode running.'))
     
-    while True:      
-      # Find a peer to connect to and initiate a session.
+    while not self.shutdown_signaled.is_set():      
+      # Find a peer with which to connect to and initiate a session.
       server_peer_id = self.select_sync_peer()
       
       if server_peer_id:
@@ -95,8 +118,8 @@ class Peer:
           self.debug_print( [(1, 'Attempting to connect to peer server.'),
                              (2, 'server_peer_id = {}'.format([server_peer_id])),
                              (2, 'ip_address = {}'.format(self.peer_dict[server_peer_id].ip_address))] )
-#           self.lock.acquire()
-          skt_ssl = self.connect_to_peer(server_peer_id, timeout)
+          self.lock.acquire()
+          skt_ssl = self.connect_to_peer(server_peer_id, socket_timeout)
           try:
             self.debug_print( (1, 'Successfully connected to peer server. Initiating peer client session.') )
             self.peer_client_session(skt_ssl)
@@ -105,7 +128,6 @@ class Peer:
           except ManualDisconnectException:
             self.debug_print( (2, 'The peer client session did not complete in a successful sync.') )
           finally:
-#             self.lock.release()
             try:
               skt_ssl.shutdown(socket.SHUT_RDWR)
               skt_ssl.close()
@@ -115,6 +137,12 @@ class Peer:
           self.debug_print( (1, 'Disconnected from peer server.') )
         except (socket.timeout, socket.error):
           self.debug_print( (2, 'Could not connect to peer server.') )
+        finally:
+          try:
+            self.lock.release()
+          # FIXME: Not sure how we could get to the above line without having acquired the lock first...
+          except RuntimeError:
+            pass
       
       # Sleep a while before iterating the loop again.
       self.debug_print( (1, 'Peer client mode going to sleep.') )
@@ -125,18 +153,18 @@ class Peer:
 
     
      
-  def run_peer_server(self):
+  def run_peer_server(self, socket_timeout=3):
     self.debug_print( (1, 'Peer server mode running.'))
-    skt_listener = self.create_listening_socket(timeout=5)
+    skt_listener = self.create_listening_socket(timeout=socket_timeout)
     
-    while True:
+    while not self.shutdown_signaled.is_set():      
       self.debug_print( (1, 'Waiting for a peer client to connect.') )
       # TODO: Will want to deal with multiple peer clients eventually.
       try:
         skt_raw, (peer_ip, _) = skt_listener.accept()
+        self.lock.acquire()        
         self.debug_print( (1, 'Connected to a peer client from \'{}\'. Initiating peer server session.'.format(peer_ip)))      
         skt_ssl = ssl.wrap_socket(skt_raw, server_side=True, keyfile=self.private_key_file, certfile=self.x509_cert_file, ssl_version=ssl.PROTOCOL_SSLv3)
-#         self.lock.acquire()
         try:
           self.peer_server_session(skt_ssl, peer_ip)
         except socket.error:
@@ -144,7 +172,6 @@ class Peer:
         except ManualDisconnectException:
           self.debug_print( (2, 'The peer server session did not complete in a successful sync.') )
         finally:
-#           self.lock.release()
           try:
             skt_ssl.shutdown(socket.SHUT_RDWR)
             skt_ssl.close()
@@ -154,6 +181,12 @@ class Peer:
         self.debug_print( (1, 'Disconnected from peer client.') )
       except (socket.timeout, socket.error):
         pass
+      finally:
+          try:
+            self.lock.release()
+          # FIXME: Not sure how we could get to the above line without having acquired the lock first...
+          except RuntimeError:
+            pass
       
 
   def peer_server_session(self, skt_ssl, peer_ip):
@@ -381,9 +414,9 @@ class Peer:
     if not os.path.exists(self.store_keys_directory):
       os.makedirs(self.store_keys_directory)
     
-    self.stores_directory = os.path.join(self.root_directory, 'stores')
-    if not os.path.exists(self.stores_directory):
-      os.makedirs(self.stores_directory)
+    self.peer_backups_directory = os.path.join(self.root_directory, 'peer_backups')
+    if not os.path.exists(self.peer_backups_directory):
+      os.makedirs(self.peer_backups_directory)
     
     
   def initialize_keys(self):
@@ -494,7 +527,7 @@ class Peer:
       return self.own_store_directory
     
     store_filename = self.compute_safe_filename(store_id)
-    return os.path.join(self.stores_directory, store_filename)
+    return os.path.join(self.peer_backups_directory, store_filename)
     
   def compute_safe_filename(self, input_string):
     return base64.urlsafe_b64encode(input_string)
@@ -543,7 +576,6 @@ class Peer:
   def aes_iv(self):
     return self.metadata.aes_iv
   
-  # FIXME: This is returning `None` even though `self._metadata` gives the correct output.
   @property
   def metadata(self):
     """
@@ -551,6 +583,10 @@ class Peer:
     that all changes are backed up to primary storage.
     """
     return self._metadata
+  
+  @property
+  def ip_address(self):
+    return self.peer_dict[self.peer_id].ip_address
 
   def get_revision_data(self, peer_id, store_id):
     revision_data = self.peer_dict[peer_id].store_revisions[store_id]
@@ -780,8 +816,8 @@ class Peer:
   def update_ip_address(self, lock=False):
     """Update this peer's already existing IP address data."""
     # Make sure we have the lock before proceeding
-    if not lock:
-      self.lock.acquire()
+#     if not lock:
+#       self.lock.acquire()
     
     # Create staging copy of data to be changed
     peer_dict = copy.deepcopy(self.peer_dict)
@@ -1664,6 +1700,27 @@ class Peer:
   #################################
   # Debug and development methods #
   #################################
+  def export_public_configuration(self):
+    with open('strongbox_public_config.pickle', 'w') as f:
+      cPickle.dump( (self.peer_id, self.store_id, self.ip_address, self.public_key.exportKey()) , f)
+    self.debug_print( (1, 'Public configuration data written to file \'./strongbox_public_config.pickle\'.') )
+    
+  def import_public_configuration(self):
+    # TODO: Unify this and `manually_associate`.
+    if not os.path.isfile('strongbox_public_config.pickle'):
+      self.debug_print( (1, 'ERROR: File \'./strongbox_public_config.pickle\' not found.') )
+      raise IOError()
+    
+    with open('strongbox_public_config.pickle', 'r') as f:
+      peer_id, _, ip_address, public_key_contents = cPickle.load(f)
+    
+    # Write the public key data to storage so `manually associate()` can get it.
+    if not os.path.isfile(self.get_peer_key_path(peer_id)):
+      # Copy the public key and associate it to the specified peer.
+      with open(self.get_peer_key_path(peer_id), 'w') as f:
+        f.write(public_key_contents)
+      
+    self.manually_associate(peer_id, ip_address, self.get_peer_key_path(peer_id))
   
   # TODO: Generalize a subset of this functionality to support the future scenario where a central server would initiate such an association.
   def manually_associate(self, peer_id, ip_address, public_key_file):
@@ -1910,10 +1967,24 @@ def demo_client():
   peer_client.check_store()
   peer_client.run_peer_client(3)
 
-def initialize_peer_configuration():
+def initialize_peer_configuration(own_store_directory=None, debug_verbosity=None):
+  if not own_store_directory:
+    own_store_directory=os.path.join(os.getcwd(), 'own_store')
+  if not debug_verbosity:
+    debug_verbosity=0
+    
+  if os.path.isdir(os.path.join(os.getcwd(),'.config')):
+    print 'Old configuration directory found. Deleting.'
+    shutil.rmtree(os.path.join(os.getcwd(),'.config'))
+  
+  if os.path.isdir(os.path.join(os.getcwd(),'peer_backups')):
+    print 'Old peer backups directory found. Deleting.'
+    shutil.rmtree(os.path.join(os.getcwd(),'peer_backups'))
+  
   print 'Creating initial configuration for peer.'
-  Peer()
+  Peer(own_store_directory=own_store_directory, debug_verbosity=debug_verbosity)
   print 'Done.'
+  
 
 message_ids = {'handshake_msg'     : 0,
                'sync_req'          : 1,
@@ -1927,6 +1998,7 @@ message_ids = {'handshake_msg'     : 0,
                'public_key_msg'    : 9    # FIXME: Should be relying on the SSL socket to verify this information.
                }
 
+# The weird shit.
 unpicklers = {'handshake_msg'     : Peer.unpickle_handshake_msg,
               'sync_req'          : Peer.unpickle_sync_req,
               'merkel_tree_msg'   : Peer.unpickle_merkel_tree_msg,
@@ -1940,22 +2012,36 @@ unpicklers = {'handshake_msg'     : Peer.unpickle_handshake_msg,
               }
 
 def main():
-  peer = Peer(debug_verbosity=10)
+  peer = Peer(debug_verbosity=1)
   peer.run()
 
 if __name__ == '__main__':
-  parser = argparse.ArgumentParser(description='Run a StrongBox peer.')
-  parser.add_argument('-i', '--init', action='store_true', help='Just initialize peer configuration')
-  parser.add_argument('-c', '--peer-client', action='store_true', help='Run in peer client mode only.')
-  parser.add_argument('-s', '--peer-server', action='store_true', help='Run in peer server mode only.')
+  parser = argparse.ArgumentParser(description='The StrongBox encrypted P2P backup program.')
 
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument('-i', '--init', action='store_true', help='Just initialize peer configuration, clearing any previous configuration if necessary.')
+  group.add_argument('-c', '--peer-client', action='store_true', help='Run in peer client mode only.')
+  group.add_argument('-s', '--peer-server', action='store_true', help='Run in peer server mode only.')
+  group.add_argument('--export-public', action='store_true', help='Export the public configuration data for this store and peer node so another node can become a backup for it.')
+  group.add_argument('--import-public', action='store_true', help='Import the public configuration data for another store and peer node and become a backup for the store.')
+  group.add_argument('--export-private', action='store_true', help='Export the private configuration data for this store so you can set up access to the store on another machine.')
+  group.add_argument('--import-private', action='store_true', help='Import the private configuration data for your store generated on another machine.')
+
+  parser.add_argument('-d', '--debug-verbosity', default=0, type=int, help='Specify the verbosity of debugging messages.')
+  # TODO: Optionally directing or "teeing" debug info to a log file would be nice, quite nice indeed.
+  parser.add_argument('--own-store', metavar='own_store_directory', dest='own_store_directory', default=None, help='Manually specify your store directory.')
+  
   args = parser.parse_args()
   
   if args.init:
-    initialize_peer_configuration()
+    initialize_peer_configuration(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
   elif args.peer_client:
     demo_client()
   elif args.peer_server:
     demo_server()
+  elif args.export_public:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_public_configuration()
+  elif args.import_public:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_public_configuration()
   else:
     main()
