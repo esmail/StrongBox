@@ -113,9 +113,9 @@ class Peer:
       peer_server_thread.join(15-(time.time()-t_i))
       if peer_client_thread.is_alive() or peer_server_thread.is_alive():
         self.debug_print( (0, 'Shutdown taking too long, forcibly quitting.') )
-        peer_client_thread.__stop()
-        peer_server_thread.__stop()
-  
+        peer_client_thread._Thread__stop()
+        peer_server_thread._Thread__stop()
+
 
   def run_peer_client(self, sleep_time=1, socket_timeout=1):
     """
@@ -130,9 +130,15 @@ class Peer:
       if server_peer_id:
         try:        
           self.debug_print( [(1, 'Attempting to connect to peer server.'),
-                             (2, 'server_peer_id = {}'.format([server_peer_id])),
-                             (2, 'network_address = {}'.format(self.peer_dict[server_peer_id].network_address))] )
-          self.lock.acquire()
+                             (1, 'network_address = {}'.format(self.peer_dict[server_peer_id].network_address)),
+                             (2, 'server_peer_id = {}'.format([server_peer_id]))] )
+
+          # FIXME: There's got to be something more sensible than this crap shoot... Maybe use queues.
+          if not self.lock.acquire(blocking=False):
+            time.sleep(5)
+            if not self.lock.acquire(blocking=False):
+              raise socket.timeout()
+            
           skt_ssl = self.connect_to_peer(server_peer_id, socket_timeout)
           try:
             self.debug_print( (1, 'Successfully connected to peer server. Initiating peer client session.') )
@@ -153,7 +159,9 @@ class Peer:
           self.debug_print( (2, 'Could not connect to peer server.') )
         finally:
           try:
-            self.lock.release()
+            # FIXME: Quick hack to ensure the recursive lock is fully released. Need to identify how multiple acquisition might occur.
+            while True:
+              self.lock.release()
           # FIXME: Not sure how we could get to the above line without having acquired the lock first...
           except RuntimeError:
             pass
@@ -180,7 +188,13 @@ class Peer:
       # TODO: Will want to deal with multiple peer clients eventually.
       try:
         skt_raw, (peer_address, _) = skt_listener.accept()
-        self.lock.acquire()        
+        
+        # FIXME: There's got to be something more sensible than this crap shoot... Maybe use queues.
+        if not self.lock.acquire(blocking=False):
+          time.sleep(5)
+          if not self.lock.acquire(blocking=False):
+            raise socket.timeout()
+          
         self.debug_print( (1, 'Connected to a peer client from \'{}\'. Initiating peer server session.'.format(peer_address)))      
         skt_ssl = ssl.wrap_socket(skt_raw, server_side=True, keyfile=self.private_key_file, certfile=self.x509_cert_file, ssl_version=ssl.PROTOCOL_SSLv3)
         try:
@@ -201,7 +215,9 @@ class Peer:
         pass
       finally:
           try:
-            self.lock.release()
+            # FIXME: Quick hack to ensure the recursive lock is fully released. Need to identify how multiple acquisition might occur.
+            while True:
+              self.lock.release()
           # FIXME: Not sure how we could get to the above line without having acquired the lock first...
           except RuntimeError:
             pass
@@ -660,7 +676,8 @@ class Peer:
 
   def get_revision_data(self, peer_id, store_id):
     """
-    A convenience function for retrieving the revision data for the user's store.
+    A convenience function for retrieving a given peer's revision data for a 
+    given store.
     """
     revision_data = self.peer_dict[peer_id].store_revisions[store_id]
     return revision_data
@@ -854,8 +871,8 @@ class Peer:
     
     if not invalid:
       # Set the peer's revision for the store to match ours.
-      self.debug_print( (1, 'Syncing peer is now verified to hold revision {}'.format(self.store_dict[store_id].revision_data.revision_number)) )
-      peer_store_revisions[store_id] = self.store_dict[store_id].revision_data
+      self.debug_print( (1, 'Syncing peer is now verified to hold revision {}'.format(our_revision.revision_number)) )
+      peer_store_revisions[store_id] = our_revision
     else:
       # Record the peer's revision for the store as `None`
       peer_store_revisions[store_id] = INVALID_REVISION
@@ -1032,7 +1049,7 @@ class Peer:
     """
     store_contents = os.listdir(self.own_store_directory)
     if store_contents:
-      delete_store_contents = raw_input('Store directory \'{}\' not empty. Okay to delete? [y/n] '.format(self.own_store_directory))
+      delete_store_contents = raw_input('Store directory \'{}\' must be empty prior to first execution. Okay to delete? [y/n] '.format(self.own_store_directory))
       
       if not delete_store_contents == 'y':
         raise IOError()
@@ -1067,7 +1084,6 @@ class Peer:
     Returns `True` if `revision_data_1` passes signature verification and either 
     is later than `revision_data_2` or that revision fails signature verification.
     """
-    # Thoroughly checked.
     
     if not self.verify_revision_data(store_id, revision_data_1):
       return False
@@ -1082,7 +1098,6 @@ class Peer:
     """
     Verify the signature of a received revision number.
     """
-    # Thoroughly checked.
     
     if (revision_data == INVALID_REVISION) or (not revision_data.signature):
       return False
@@ -1144,7 +1159,7 @@ class Peer:
     sync sender passed us.
     """
     
-    peer_revision_data = self.peer_dict[peer_id].store_revisions[store_id]
+    peer_revision_data = self.get_revision_data(peer_id, store_id)
     
     # The revision data's signature doesn't verify (we synced to a bad backup).
     if not self.verify_revision_data(store_id, peer_revision_data):
@@ -1253,7 +1268,7 @@ class Peer:
     skt = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     skt.settimeout(timeout)
     skt.bind(('', self.listening_port))
-    skt.listen(1) # FIXME
+    skt.listen(1)
     return skt
   
   
@@ -1283,7 +1298,7 @@ class Peer:
     
     # If we are both at the same revision for all mutual stores, we will verify one another's revision for some mutual store.
     if not potential_stores:
-      # Only consider the mutual stores for which both ends have a valid revision.
+      # Here only consider the mutual stores for which both ends have a valid revision.
       for store_id in mutual_stores:
         our_revision = self.store_dict[store_id].revision_data
         their_revision = peer_store_revisions[store_id]
@@ -1291,9 +1306,10 @@ class Peer:
           potential_stores.add(store_id)
 
     # Return `None` if we couldn't find a store to sync.
-    if not potential_stores and (not mutual_stores):
+    if (not potential_stores) and (not mutual_stores):
       return None
     elif not potential_stores:
+      # This might include store for which neither party is known to hold a valid revision.
       return mutual_stores
     # Otherwise, choose a random store from the determined options.
     return random.sample(potential_stores, 1)[0]
@@ -1301,46 +1317,52 @@ class Peer:
   
   def select_sync_peer(self):
     """
-    Select which peer to sync with.
+    Select which peer to sync with. This is done by randomly sampling from a 
+    probability density function contains, in order of preference, peers with 
+    newer revisions of our store or backups, peers with older revisions, peers 
+    with whom we share a valid revision, and any other peers (peers that fall in
+    a combination of these categories are also accordingly preferred).
     """
     other_peers = set(self.peer_dict.keys()).difference(set([self.peer_id]))
-    potential_peers = set()
+    potential_peers = list()
     
-    # Compile a set of peers who (reportedly) have newer revisions of our stores.
+    
+    # Compile a list of peers who (reportedly) have newer revisions of our stores.
     for peer_id in other_peers:
       peer_store_revisions = self.peer_dict[peer_id].store_revisions
       for store_id in peer_store_revisions.keys():
         if self.gt_revision_data(store_id, peer_store_revisions[store_id], self.store_dict[store_id].revision_data):
-          potential_peers.add(peer_id)
+          duplicate_entries = 4
+          potential_peers.extend([peer_id]*duplicate_entries)
           # No need to check the revision data for this peer's other synced stores
           break
     
-    # If no peers have newer revisions for us, compile peers for whom we have newer revisions
-    if not potential_peers:
-      for peer_id in other_peers:
-        peer_store_revisions = self.peer_dict[peer_id].store_revisions
-        for store_id in peer_store_revisions.keys():
-          if self.gt_revision_data(store_id, self.store_dict[store_id].revision_data, peer_store_revisions[store_id]):
-            potential_peers.add(peer_id)
-            # No need to check the revision data for this peer's other synced stores
-            break
+    # Next compile the peers for whom we have newer revisions
+    for peer_id in other_peers:
+      peer_store_revisions = self.peer_dict[peer_id].store_revisions
+      for store_id in peer_store_revisions.keys():
+        if self.gt_revision_data(store_id, self.store_dict[store_id].revision_data, peer_store_revisions[store_id]):
+          duplicate_entries = 3
+          potential_peers.extend([peer_id]*duplicate_entries)
+          # No need to check the revision data for this peer's other synced stores
+          break
     
     # Otherwise, consider any peer with whom we share a valid revision.
-    if not potential_peers:
-      for peer_id in other_peers:
-        peer_store_revisions = self.peer_dict[peer_id].store_revisions
-        for store_id in peer_store_revisions.keys():
-          if self.store_dict[store_id].revision_data and peer_store_revisions[store_id]:
-            potential_peers.add(peer_id)
-            # No need to check the revision data for this peer's other synced stores
-            break
+    for peer_id in other_peers:
+      peer_store_revisions = self.peer_dict[peer_id].store_revisions
+      for store_id in peer_store_revisions.keys():
+        if self.store_dict[store_id].revision_data and peer_store_revisions[store_id]:
+          duplicate_entries = 2
+          potential_peers.extend([peer_id]*duplicate_entries)
+          # No need to check the revision data for this peer's other synced stores
+          break
+    
+    potential_peers.extend(other_peers)
     
     # Return `None` if we couldn't find a peer to sync with.
-    if (not potential_peers) and other_peers:
-      return random.sample(other_peers, 1)[0]
-    elif not potential_peers:
+    if not potential_peers:
       return None
-    # Otherwise, choose a random store from the determined options.
+    # Otherwise, choose a random peer from the determined options.
     return random.sample(potential_peers, 1)[0]
   
   
@@ -1350,8 +1372,8 @@ class Peer:
     participating in.
     """
     # Get the communicating peer server's list of stores and respective revision data.
-    our_revision = self.store_dict[store_id].revision_data
-    peer_revision = self.peer_dict[peer_id].store_revisions[store_id]
+    our_revision = self.get_revision_data(self.peer_id, store_id)
+    peer_revision = self.get_revision_data(peer_id, store_id)
     
     # Communicating peer has a newer revision of the store than us.
     if self.gt_revision_data(store_id, peer_revision, our_revision):
@@ -1630,6 +1652,7 @@ class Peer:
       disconnect_message = self.unpickle('disconnect_req', pickled_payload)
       self.debug_print( [(1, 'Peer requested disconnect, reporting the following:'),
                          (1, disconnect_message)] )
+      raise ManualDisconnectException()
     else:
       self.debug_print_bad_message(message_id, pickled_payload)
 
@@ -1739,12 +1762,12 @@ class Peer:
     self.manually_associate(peer_id, network_address, self.get_peer_key_path(peer_id))
 
 
-  def export_duplicate_configuration(self):
+  def export_duplication_configuration(self):
     # Ensure we have a valid address to export
     self.update_network_address()
-    with open('strongbox_duplicate_config.pickle', 'w') as f:
+    with open('strongbox_duplication_config.pickle', 'w') as f:
       cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey(), self.private_key.exportKey(), self.aes_key) , f)
-    self.debug_print( (0, 'Duplicate configuration data written to file \'./strongbox_duplicate_config.pickle\'.') )
+    self.debug_print( (0, 'Duplication configuration data written to file \'./strongbox_duplication_config.pickle\'.') )
   
   
   # TODO: Generalize a subset of this functionality to support the future scenario where a central server would initiate such an association.
@@ -1985,10 +2008,6 @@ def demo_server(debug_verbosity=2):
 #FIXME: Doesn't respect verbosity and directory overrides.
 def demo_client(debug_verbosity=2):
   peer_client = Peer(debug_verbosity=debug_verbosity, debug_preamble='Peer client:')
-#   with open('a_metadata_file.pickle', 'r') as f:
-#     peer_a_id = cPickle.load(f).peer_id
-#     
-#   peer_client.manually_associate(peer_a_id, 'ec2-54-87-72-190.compute-1.amazonaws.com', 'a_public_key.pem')
   peer_client.update_network_address()
   peer_client.check_store()
   peer_client.run_peer_client(3)
@@ -2016,14 +2035,14 @@ def delete_old_configuration():
     shutil.rmtree(os.path.join(os.getcwd(),'.peer_backups'))
 
 
-def import_duplicate_configuration():
+def import_duplication_configuration():
   delete_old_configuration()
   
-  if not os.path.isfile('strongbox_duplicate_config.pickle'):
-    print 'ERROR: File \'./strongbox_duplicate_config.pickle\' not found.'
+  if not os.path.isfile('strongbox_duplication_config.pickle'):
+    print 'ERROR: File \'./strongbox_duplication_config.pickle\' not found.'
     raise IOError()
   
-  with open('strongbox_duplicate_config.pickle', 'r') as f:
+  with open('strongbox_duplication_config.pickle', 'r') as f:
     peer_id, _, network_address, public_key_contents, private_key_contents, aes_key = cPickle.load(f)
   
   peer = Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity \
@@ -2070,8 +2089,8 @@ if __name__ == '__main__':
   group.add_argument('-s', '--peer-server', action='store_true', help='Run in peer server mode only.')
   group.add_argument('--export-backup', action='store_true', help='Export the (public) configuration data another peer would need to act as a backup for your store.')
   group.add_argument('--import-backup', action='store_true', help='Import the (public) configuration data needed to act as a backup for another peer\'s store.')
-  group.add_argument('--export-duplicate', action='store_true', help='Export the (private) configuration data needed to access your store from another machine.')
-  group.add_argument('--import-duplicate', action='store_true', help='Generate new initial configuration data for this peer, importing the (private) configuration needed to access your store from another machine here.')
+  group.add_argument('--export-duplication', action='store_true', help='Export the (private) configuration data needed to access your store from another machine.')
+  group.add_argument('--import-duplication', action='store_true', help='Generate new initial configuration data for this peer, importing the (private) configuration needed to access your store from another machine here.')
 
   parser.add_argument('-d', '--debug-verbosity', default=0, type=int, help='Specify the verbosity of debugging messages.')
   # TODO: Optionally directing or "teeing" debug info to a log file would be nice, quite nice indeed.
@@ -2089,9 +2108,9 @@ if __name__ == '__main__':
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_backup_configuration()
   elif args.import_backup:
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_backup_configuration()
-  elif args.export_duplicate:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_duplicate_configuration()
-  elif args.import_duplicate:
-    import_duplicate_configuration()
+  elif args.export_duplication:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_duplication_configuration()
+  elif args.import_duplication:
+    import_duplication_configuration()
   else:
     main(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
