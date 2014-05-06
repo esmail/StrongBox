@@ -15,7 +15,12 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
   directory_contents = listdir(root_directory)
   
   if not directory_contents:
-    return DirectoryMerkelTree(dmt_hash=empty_directory_hash, children=None)
+    empty_directory_cipher = sha256('empty_directory')
+    
+    if nonce:
+      empty_directory_cipher.update(nonce)
+      
+    return DirectoryMerkelTree(dmt_hash=empty_directory_cipher.digest(), children=None)
     
   children = dict()
   
@@ -33,6 +38,7 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
         file_contents = encrypter.encrypt(file_contents)
       
       file_hash = sha256(file_contents)
+      file_hash.update(filename) # Obscure the case where files have identical contents.
       
       if nonce:
         file_hash.update(nonce)
