@@ -400,7 +400,8 @@ class Peer:
     merkel_tree = None # Running the peer will cause a check of the store which will populate this and sign a new revision
     initial_peers = set([peer_id])
     if not aes_key:
-      aes_key = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
+      aes_key = Crypto.Random.new().read(Crypto.Cipher.AES.key_size[-1])
+    # FIXME: Remove
     aes_iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
     
     peer_dict = {peer_id: PeerData(network_address, {store_id: own_revision_data})}
@@ -486,7 +487,7 @@ class Peer:
       with open(self.private_key_file, 'r') as f:
         self.private_key = Crypto.PublicKey.RSA.importKey(f.read())
     else:
-      self.private_key = Crypto.PublicKey.RSA.generate(2048)
+      self.private_key = Crypto.PublicKey.RSA.generate(4096)
       with open(self.private_key_file, 'w') as f:
         f.write(self.private_key.exportKey())
     

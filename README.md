@@ -10,7 +10,7 @@ All in due time...
 
 ### What?
 
-A working prototype of an encrypted, P2P file syncing system in the vein of OwnCloud (a self-hosted, client-server  system styled after the more famous DropBox). With StrongBox, users benefit from the accessibility and reliability of having redundant backups of their data without sacrificing privacy. Made as a final project submission for Professor Jim Waldo's Spring 2014 CS262 at Harvard (not bad for two weeks of coding!).
+A working prototype of an encrypted, P2P file syncing system in the vein of OwnCloud (a self-hosted, client-server  system styled after the more famous DropBox). With StrongBox, users benefit from the accessibility and reliability of having redundant backups of their data without sacrificing privacy. Made as a final project submission for Professor Jim Waldo's Spring 2014 CS262 at Harvard (and not too bad for two weeks of coding!).
 
 ### Why?
 
@@ -40,7 +40,7 @@ A revision of a store can be thought of as a cohesive state of the store at some
 
 ##### Peers
 
-A peer is a running instance of StrongBox, syncing its owner's store. StrongBox peers interact directly with one another. During communication, peers "gossip" to one another about the state of other peers to quickly disseminate information across the system. For example, peer A might gossip to peer B, "peer C doesn't have a valid revision of store X and needs an update," or "peer D just entered the system network address Z and might be of interest to you." Through the course of communications, two peers will come to an agreement on which mutually held store they will sync on and what type of sync each will be undertaking (send, receive, or verify).
+A peer is a running instance of StrongBox, syncing its owner's store. StrongBox peers interact directly with one another. During communication, peers "gossip" to one another about the state of other peers to quickly disseminate information across the system. For example, peer A might gossip to peer B, "peer C doesn't have a valid revision of store X and needs an update," or "peer D just entered the system at network address Z and might be of interest to you." Through the course of communications, two peers will come to an agreement on which mutually held store they will sync on and what type of sync each will be undertaking (send, receive, or verify).
 
 
 ### What's missing?
