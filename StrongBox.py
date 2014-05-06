@@ -24,6 +24,7 @@ import directory_merkel_tree
 import subprocess
 import argparse
 
+
 # Named tuples have (immutable) class-like semantics for accessing fields, but are straightforward to pickle/unpickle.
 # The following types are for important data whose contents and format should be relatively stable at this point.
 PeerData = namedtuple('PeerData', 'network_address, store_revisions')
@@ -32,8 +33,9 @@ RevisionData = namedtuple('RevisionData', 'revision_number, store_hash, signatur
 Metadata = namedtuple('Metadata', 'peer_id, peer_dict, store_id, store_dict, aes_key, aes_iv, merkel_tree')
 
 
-# A needed constant for unpacking messages
-HEADER_SIZE = struct.calcsize('!I')
+# Necessary constants for messaging
+PROTOCOL_VERSION = 1
+INT_PACK_SIZE = struct.calcsize('!I')
 
 INVALID_REVISION = None #RevisionData(revision_number=0, store_hash=None, signature=None)
 
@@ -42,6 +44,7 @@ class ManualDisconnectException(Exception):
   An exception for indicating manual disconnections which should not be treated as errors.
   """
   pass
+
 
 class Peer:
   """
@@ -369,13 +372,13 @@ class Peer:
       # TODO: Raise a meaningful exception.
       raise Exception()
       
+      
   ####################
   # Class attributes #
   ####################
   
   # FIXME: Beware the unsafety if accessing mutable fields from multiple threads.
   listening_port = 51338 # TODO: Magic number. Ideally would want listening listening_port number to be configurable per peer.
-  
   
   ##########################
   # Initialization methods #
@@ -434,6 +437,7 @@ class Peer:
     store_id = hashlib.sha256(public_key.exportKey()).digest()
     self.debug_print( (2, 'Generated new store ID: {}'.format([store_id])) )
     return store_id
+
 
   #######################
   # Config file methods #
@@ -558,6 +562,7 @@ class Peer:
       key_path = os.path.join(self.peer_keys_directory, peer_filename+'.pem')
     return key_path
   
+  
   def get_peer_key(self, peer_id):
     """
     Convenience function to load a peer's public key.
@@ -568,6 +573,7 @@ class Peer:
     with open(self.get_peer_key_path(peer_id), 'r') as f:
       public_key = Crypto.PublicKey.RSA.importKey(f.read())
     return public_key  
+
 
   def _get_store_key_path(self, store_id):
     """
@@ -580,6 +586,7 @@ class Peer:
       key_path = os.path.join(self.store_keys_directory, store_filename+'.pem')
     return key_path
   
+  
   def get_store_key(self, store_id):
     """
     Convenience function to load a store's public key .
@@ -591,6 +598,7 @@ class Peer:
       public_key = Crypto.PublicKey.RSA.importKey(f.read())
     return public_key
   
+  
   def _get_store_path(self, store_id):
     """
     Unsafe reference to a store's absolute path meant for internal use only.
@@ -601,12 +609,14 @@ class Peer:
     store_filename = self.compute_safe_filename(store_id)
     return os.path.join(self.peer_backups_directory, store_filename)
     
+    
   def compute_safe_filename(self, input_string):
     """
     Take any string of characters (e.g. the result of a SHA hash) and reversibly 
     convert it to a valid filename.
     """
     return base64.urlsafe_b64encode(input_string)
+
 
   ######################
   # Metadata accessors #
@@ -617,6 +627,7 @@ class Peer:
     """A quasi-unique identifier for this particular peer."""
     return self.metadata.peer_id
   
+  
   @property
   def peer_dict(self):
     """
@@ -626,10 +637,12 @@ class Peer:
     """
     return self.metadata.peer_dict
   
+  
   @property
   def store_id(self):
     """A quasi-unique identifier for this peer's store."""
     return self.metadata.store_id
+  
   
   @property
   def store_dict(self):
@@ -640,12 +653,14 @@ class Peer:
     """
     return self.metadata.store_dict 
   
+  
   @property
   def merkel_tree(self):
     """
     A `DirectoryMerkelTree` object containing the current state of the user's store.
     """
     return self.metadata.merkel_tree
+  
   
   @property
   def aes_key(self):
@@ -654,10 +669,12 @@ class Peer:
     """
     return self.metadata.aes_key
   
+  
   # FIXME: Remove.
   @property
   def aes_iv(self):
     return self.metadata.aes_iv
+  
   
   @property
   def metadata(self):
@@ -667,12 +684,14 @@ class Peer:
     """
     return self._metadata
   
+  
   @property
   def network_address(self):
     """
     The current network address of this peer.
     """
     return self.peer_dict[self.peer_id].network_address
+
 
   def get_revision_data(self, peer_id, store_id):
     """
@@ -686,9 +705,6 @@ class Peer:
   # Configuration metadata mutators #
   ###################################
   
-  # Trying out weaving a lock through these calls (akin to priority inversion)
-  #  so only one thread can access the metadata at a time. Hope it works.
-
   def update_metadata(self, metadata, lock_acquired=False):
     """
     All updates to a peer's stored metadata occur through this function so
@@ -954,7 +970,6 @@ class Peer:
         file_contents = self.decrypt(file_contents)
         self.debug_print( [(5, 'file_contents (decrypted) = {}'.format(file_contents))] )
         
-            
     path = os.path.join(self._get_store_path(store_id), relative_path)
     
     if isdir:
@@ -977,7 +992,8 @@ class Peer:
            
       with open(path, 'w') as f:
         f.write(file_contents)
-        
+
+
   def store_delete_item(self, store_id, relative_path):
     """
     Delete a file or directory from a locally held store (either the user's or 
@@ -999,12 +1015,11 @@ class Peer:
       #  ordering of delete items we might preemptively delete files or folders
       #  that still have pending delete requests.
       shutil.rmtree(path)
-      
-   
+
 
   def decrypt_own_store_path(self, encrypted_relative_path):
     """
-    Convert an encrypted store-relative path to its original form.
+    Convert an encrypted, store-relative path to its original form.
     """
     print_tuples = [ (1, 'DEBUG: Decrypting path: {}'.format(encrypted_relative_path)) ]
     
@@ -1056,6 +1071,8 @@ class Peer:
       else:
         shutil.rmtree(self.own_store_directory)
         os.makedirs(self.own_store_directory)
+
+
   #########################
   # Cryptographic methods #
   #########################
@@ -1145,14 +1162,16 @@ class Peer:
     updated, new, deleted = directory_merkel_tree.compute_tree_changes(mt_new, mt_old)
     
     return updated.union(new), deleted
-    
+
+
   def get_store_hash(self, store_id, nonce=''):
     """
     Retrieve the overall hash value for the user's store utilizing a nonce as needed.
     """
     merkel_tree = self.get_merkel_tree(store_id, nonce)
     return merkel_tree.dmt_hash
-    
+
+
   def verify_sync(self, peer_id, store_id):
     """
     Check our newly syncronized store against the signed revision data that the 
@@ -1182,7 +1201,8 @@ class Peer:
       self.debug_print( (1, 'New store contents could not be verified by peer\'s signed revision data. Marking our revision as invalid.') )
       self.update_own_store_revision(store_id, INVALID_REVISION)
       return False
-      
+
+
   def increment_revision(self):
     """Create and record new revision data for the peer's own store."""
     
@@ -1198,7 +1218,8 @@ class Peer:
     # Enact the change
     revision_data = self.sign_revision(revision_number, store_hash)
     self.update_own_store_revision(self.store_id, revision_data)
-    
+
+
   def sign(self, payload):
     """
     Convenience primative for computing a signature for any string.
@@ -1207,7 +1228,8 @@ class Peer:
     payload_hash = Crypto.Hash.SHA256.new(payload)
     signature = Crypto.Signature.PKCS1_v1_5.new(self.private_key).sign(payload_hash)
     return signature
-  
+
+
   def verify(self, store_id, signature, payload):
     """
     Convenience primative for verifying the signature associated with a string.
@@ -1217,7 +1239,8 @@ class Peer:
     payload_hash = Crypto.Hash.SHA256.new(payload)
     
     return Crypto.Signature.PKCS1_v1_5.new(public_key).verify(payload_hash, signature)
-  
+
+
   def encrypt(self, plaintext):
     """
     Deterministically encrypt the input string using AES.
@@ -1231,7 +1254,8 @@ class Peer:
     cipher = Crypto.Cipher.AES.new(self.aes_key, Crypto.Cipher.AES.MODE_CFB, aes_iv)
     ciphertext = aes_iv + cipher.encrypt(plaintext)
     return ciphertext
-    
+
+
   def decrypt(self, ciphertext):
     """
     Decrypt AES-encrypted data.
@@ -1241,19 +1265,22 @@ class Peer:
     plaintext = cipher.decrypt(ciphertext)[Crypto.Cipher.AES.block_size:]
     return plaintext
 
+
   def encrypt_filename(self, filename):
     encrypted_filename = self.encrypt(filename)
     return self.compute_safe_filename(encrypted_filename)
+
   
   def decrypt_filename(self, safe_encrypted_filename):
     encrypted_filename = base64.urlsafe_b64decode(safe_encrypted_filename)
     filename = self.decrypt(encrypted_filename)
     return filename
+
    
   #########################
   # Communication helpers #
   #########################
-  
+
   def connect_to_peer(self, peer_id, timeout=5):
     # TODO: Raises `KeyError` exception on invalid UUID.
     peer_address = self.peer_dict[peer_id].network_address
@@ -1262,8 +1289,8 @@ class Peer:
     skt.settimeout(timeout)
     skt.connect((peer_address, self.listening_port))
     return skt
-  
-  
+
+
   def create_listening_socket(self, timeout=5):
     skt = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     skt.settimeout(timeout)
@@ -1274,7 +1301,7 @@ class Peer:
   
   def select_sync_store(self, peer_id):
     """
-    Select which of a peer server's stores to sync with.
+    Select which of a peer server's stores to sync on.
     """
     # Get the communicating peer server's list of stores and respective revision data.
     peer_store_revisions = self.peer_dict[peer_id].store_revisions
@@ -1540,10 +1567,15 @@ class Peer:
   ############################
   
   def send(self, skt, message_id, message_data):
+    """
+    Generic message transmission wrapper that pickles the message to be sent, 
+    prepends the protocol version and overall length, and dumps the data into 
+    the socket.
+    """ 
     pickled_payload = cPickle.dumps(message_data)
     message_body = (message_id, pickled_payload)
     pickled_message = cPickle.dumps(message_body)
-    skt.send(struct.pack('!I', len(pickled_message))+pickled_message)
+    skt.send(struct.pack('!I', PROTOCOL_VERSION)+struct.pack('!I', len(pickled_message))+pickled_message)
     
   def send_handshake_msg(self, skt):
     message_id = message_ids['handshake_msg']
@@ -1605,28 +1637,41 @@ class Peer:
     Low-level receipt of messages. Attempts to retrieve exact message lengths to 
     support consecutively submitted messsages.
     """ 
-    # First retrieve the message header
+    # First retrieve the protocol version
     message_buffer = str()
     length_received = 0
-    while length_received < HEADER_SIZE:
-      message_buffer += skt.recv(HEADER_SIZE - length_received)
+    while length_received < INT_PACK_SIZE:
+      message_buffer += skt.recv(INT_PACK_SIZE - length_received)
       length_received = len(message_buffer)
     
-    # Unpack the header
-    length = struct.unpack('!I',message_buffer[0:HEADER_SIZE])[0]
+    # Unpack the protocol version
+    protocol_version = struct.unpack('!I',message_buffer[0:INT_PACK_SIZE])[0]
+    
+    if protocol_version != PROTOCOL_VERSION:
+      self.debug_print( (1, 'WARNING: Received message with protocol version \'{}\' instead of \'{}\'.'.format(protocol_version,PROTOCOL_VERSION)))
+      # TODO: Find a meaningful exception for this.
+      raise Exception()
+    
+    # Now retrieve the message length
+    while length_received < (INT_PACK_SIZE * 2):
+      message_buffer += skt.recv((INT_PACK_SIZE * 2) - length_received)
+      length_received = len(message_buffer)
+    
+    # Unpack the message length
+    length = struct.unpack('!I',message_buffer[INT_PACK_SIZE:(INT_PACK_SIZE * 2)])[0]
     
     # Retrieve the message body.
-    while length_received < (length + HEADER_SIZE):
-      message_buffer += skt.recv((length + HEADER_SIZE) - length_received)
+    while length_received < (length + (INT_PACK_SIZE * 2)):
+      message_buffer += skt.recv((length + (INT_PACK_SIZE * 2)) - length_received)
       length_received = len(message_buffer)
     
     # Message has incorrect length.
-    if len(message_buffer) != (length + HEADER_SIZE):
-      # FIXME: Provide a meaningful exception.
+    if len(message_buffer) != (length + (INT_PACK_SIZE * 2)):
+      # TODO: Provide a meaningful exception.
       raise Exception()
     
     # Unpickle the message contents
-    pickled_message = message_buffer[HEADER_SIZE:HEADER_SIZE+length]
+    pickled_message = message_buffer[(INT_PACK_SIZE * 2):(INT_PACK_SIZE * 2)+length]
     (message_id, pickled_payload) = cPickle.loads(pickled_message)
     return message_id, pickled_payload
   
