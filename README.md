@@ -1,5 +1,9 @@
 StrongBox
 ============
+For execution help,
+‘’‘bash
+python StrongBox.py -h
+‘’‘
 
 ### What?
 
