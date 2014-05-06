@@ -9,6 +9,12 @@ import base64
 empty_directory_hash = sha256('empty directory').digest()
 
 def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
+  """
+  Generate a Merkel tree object for the directory provided. The resulting Merkel 
+  tree captures the state of the directory in the form of hierarchically 
+  generated hashes of the directories contents. A nonce can optionally be provided 
+  to facilitate remote verification of directory contents.
+  """
   if not isdir(root_directory):
     raise IOError('The root directory supplied, \'{}\', is not in fact a directory.'.format(root_directory))
   
@@ -73,6 +79,10 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
   return dmt_tree
 
 def print_tree(tree):
+  """
+  Recursively print out the hash of the tree, the tree's contents, and the 
+  printed output from those contents.
+  """
   if not tree:
     print None
     return
@@ -89,6 +99,10 @@ def print_tree(tree):
     print 'File hash = {}'.format(base64.urlsafe_b64encode(tree.dmt_hash))
 
 def compute_tree_changes(dmt_new, dmt_old, directory_path=''):
+  """
+  Compare the Merkel trees for two directories and return lists of the items 
+  added, updated, and delted.
+  """
   updated, new, deleted = set(), set(), set()
   # Base cases:
   # Both files or empty directories
@@ -149,6 +163,9 @@ def compute_tree_changes(dmt_new, dmt_old, directory_path=''):
   return updated, new, deleted
 
 def get_all_paths(dmt, directory_path=''):
+  """
+  Return the relative paths to all of the contents of a directory Merkel tree.
+  """
   # Base case.
   if not dmt.children:
     return set()
@@ -168,6 +185,10 @@ def get_all_paths(dmt, directory_path=''):
   
 
 class DirectoryMerkelTree:
+  """
+  A simple tree implementation designed to contain Merkel tree information about 
+  a directory or file.
+  """
   def __init__(self, dmt_hash, children):
     self.dmt_hash = dmt_hash
     self.children = children
@@ -196,10 +217,12 @@ class DirectoryMerkelTree:
     None
 
 if __name__ == '__main__':
+  # Tests
   tree = make_dmt(os.path.join(os.getcwd(), 'personal/'))
   print get_all_paths(tree)
   print_tree(tree)
   
+  # FIXME: These directories are no longer in the repository. Instead generate directories to compare.
   tree_a = make_dmt(os.path.join(os.getcwd(), 'testA/'))
   tree_b = make_dmt(os.path.join(os.getcwd(), 'testB/'))
   

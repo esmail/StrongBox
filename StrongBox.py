@@ -1578,51 +1578,81 @@ class Peer:
     skt.send(struct.pack('!I', PROTOCOL_VERSION)+struct.pack('!I', len(pickled_message))+pickled_message)
     
   def send_handshake_msg(self, skt):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['handshake_msg']
     message_data = (self.peer_id, self.peer_dict)
     self.send(skt, message_id, message_data)
     
   def send_sync_req(self, skt, store_id):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['sync_req']
     message_data = store_id
     self.send(skt, message_id, message_data)
     
   def send_merkel_tree_msg(self, skt, store_id, merkel_tree):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['merkel_tree_msg']
     message_data = merkel_tree
     self.send(skt, message_id, message_data)
     
   def send_update_file_msg(self, skt, relative_path, file_contents):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['update_file_msg']
     message_data = (relative_path, file_contents)
     self.send(skt, message_id, message_data)
     
   def send_delete_file_msg(self, skt, relative_path):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['delete_file_msg']
     message_data = relative_path
     self.send(skt, message_id, message_data)
     
   def send_sync_complete_msg(self, skt):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['sync_complete_msg']
     message_data = None
     self.send(skt, message_id, message_data)
     
   def send_verify_sync_req(self, skt, nonce):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['verify_sync_req']
     message_data = nonce
     self.send(skt, message_id, message_data)
         
   def send_verify_sync_resp(self, skt, verification_hash):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['verify_sync_resp']
     message_data = verification_hash
     self.send(skt, message_id, message_data)
         
   def send_disconnect_req(self, skt, disconnect_message):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['disconnect_req']
     message_data = disconnect_message
     self.send(skt, message_id, message_data)    
 
   def send_public_key_msg(self, skt):
+    """
+    Simple message transmission wrapper.
+    """
     message_id = message_ids['public_key_msg']
     message_data = self.public_key.exportKey()
     self.send(skt, message_id, message_data)    
@@ -1634,8 +1664,9 @@ class Peer:
   
   def receive(self, skt):
     """
-    Low-level receipt of messages. Attempts to retrieve exact message lengths to 
-    support consecutively submitted messsages.
+    Low-level message receipt.  Checks the message's protocol version, retrieves 
+    only the necessary amount of data (to support consecutively sent messages), 
+    and unpickles the message body.
     """ 
     # First retrieve the protocol version
     message_buffer = str()
@@ -1692,6 +1723,10 @@ class Peer:
     
     
   def handle_unexpected_message(self, message_id, pickled_payload):
+    """
+    See if the unexpected message was a disconnect request and respond accordingly.
+    Otherwise, print the message contents and raise an exception.
+    """
     if message_id == message_ids['disconnect_req']:
       # Unpickle message data from `'disconnect_req'` message type.
       disconnect_message = self.unpickle('disconnect_req', pickled_payload)
@@ -1700,13 +1735,20 @@ class Peer:
       raise ManualDisconnectException()
     else:
       self.debug_print_bad_message(message_id, pickled_payload)
+      raise Exception()
 
 
   def unpickle(self, message_type, pickled_payload):
+    """
+    "Demultiplex" a received message to its specific unpickling method.
+    """
     return unpicklers[message_type](self, pickled_payload)
 
 
   def unpickle_handshake_msg(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     (peer_id, peer_dict) = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'handshake_msg\' message.'),
 #                        (2, 'peer_id = {}'.format([peer_id])),
@@ -1717,6 +1759,9 @@ class Peer:
 
 
   def unpickle_sync_req(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     store_id = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'sync_req\' message.'),
 #                        (2, 'store_id = {}'.format([store_id]))] )
@@ -1724,6 +1769,9 @@ class Peer:
     return store_id
 
   def unpickle_merkel_tree_msg(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     merkel_tree = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'merkel_tree_msg\' message.'),
 #                        (4, 'merkel_tree:')] )
@@ -1734,6 +1782,9 @@ class Peer:
     return merkel_tree
   
   def unpickle_update_file_msg(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     relative_path, file_contents = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'update_file_msg\' message.'),
 #                        (2, 'relative_path = {}'+relative_path),
@@ -1743,6 +1794,9 @@ class Peer:
     return relative_path, file_contents
    
   def unpickle_delete_file_msg(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     relative_path = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'delete_file_msg\' message.'),
 #                        (2, 'relative_path = '+relative_path)] )
@@ -1750,10 +1804,16 @@ class Peer:
     return relative_path
 
   def unpickle_sync_complete_msg(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
 #     self.debug_print( (1, 'Unpickled a (empty) \'sync_complete_msg\' message.') )
     return
   
   def unpickle_verify_sync_req(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     nonce = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'verify_sync_req\' message.'),
 #                        (3, 'nonce = {}'.format(nonce))] )
@@ -1762,6 +1822,9 @@ class Peer:
 
 
   def unpickle_verify_sync_resp(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     verification_hash = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'verify_sync_resp\' message.'),
 #                        (3, 'verification_hash = {}'.format([verification_hash]))] )
@@ -1769,6 +1832,9 @@ class Peer:
     return verification_hash
   
   def unpickle_public_key_msg(self, pickled_payload):
+    """
+    A simple wrapper for unpickling.
+    """
     public_key_file_contents = cPickle.loads(pickled_payload)
 #     self.debug_print( [(1, 'Unpickled a \'public_key_msg\' message.'),
 #                        (3, 'public_key_file_contents = {}'.format([public_key_file_contents]))] )
@@ -1779,6 +1845,9 @@ class Peer:
   # Debug and development methods #
   #################################
   def export_backup_configuration(self):
+    """
+    Export the (public) configuration data another peer would need to act as a backup for your store.
+    """
     # Ensure we have a valid address to export
     self.update_network_address()
     with open('strongbox_backup_config.pickle', 'w') as f:
@@ -1786,6 +1855,9 @@ class Peer:
     self.debug_print( (0, 'Backup configuration data written to file \'./strongbox_backup_config.pickle\'.') )
     
   def import_backup_configuration(self, config_file=None, peer_id=None, network_address=None, public_key_contents=None):
+    """
+    Import the (public) configuration data needed to act as a backup for another peer\'s store.
+    """
     # TODO: Unify this and `manually_associate`.
     if (not peer_id) or (not public_key_contents):
       if not config_file:
@@ -1808,6 +1880,9 @@ class Peer:
 
 
   def export_duplication_configuration(self):
+    """
+    Export the (private) configuration data needed to access your store from another machine.
+    """
     # Ensure we have a valid address to export
     self.update_network_address()
     with open('strongbox_duplication_config.pickle', 'w') as f:
@@ -1893,6 +1968,7 @@ class Peer:
     same call and be displayed under the same preamble and call stack (if any).
     
     Semantically, the levels are (currently) roughly:
+    0: Minimal (default).
     1: Interesting info for demoing.
     2: Additionally print uglies such as hashes and ID strings that are of nearly-intelligible length.
     3: Additionally print noisy stuff and larger data like peer and store dictionaries.
@@ -1927,6 +2003,10 @@ class Peer:
 
 
   def debug_print_bad_message(self, message_id, pickled_payload):
+    """
+    Extract the type and contents from an unexpected message and (optionally) 
+    print them out.
+    """
     self.debug_print( (1, 'Unexpected message received.'))
     
     # Lookup by value, an abuse of the dictionary type...
@@ -2044,20 +2124,29 @@ def demo_B():
   peer_b.run()
 
 #FIXME: Doesn't respect verbosity and directory overrides.
-def demo_server(debug_verbosity=2):
+def run_peer_server_only(debug_verbosity=2):
+  """
+  Run in peer server mode only.
+  """
   peer_server = Peer(debug_verbosity=debug_verbosity, debug_preamble='Peer server:')
   peer_server.update_network_address()
   peer_server.check_store()
   peer_server.run_peer_server()
   
 #FIXME: Doesn't respect verbosity and directory overrides.
-def demo_client(debug_verbosity=2):
+def run_peer_client_only(debug_verbosity=2):
+  """
+  Run in peer client mode only.
+  """
   peer_client = Peer(debug_verbosity=debug_verbosity, debug_preamble='Peer client:')
   peer_client.update_network_address()
   peer_client.check_store()
   peer_client.run_peer_client(3)
 
 def initialize_peer_configuration(own_store_directory=None, debug_verbosity=None):
+  """
+  Generate new initial configuration data for this peer.
+  """
   if not own_store_directory:
     own_store_directory=os.path.join(os.getcwd(), 'own_store')
   if not debug_verbosity:
@@ -2071,6 +2160,9 @@ def initialize_peer_configuration(own_store_directory=None, debug_verbosity=None
   
 
 def delete_old_configuration():
+  """
+  Delete old configuration data in preparation for initialization.
+  """
   if os.path.isdir(os.path.join(os.getcwd(),'.config')):
     print 'Old configuration directory found. Deleting.'
     shutil.rmtree(os.path.join(os.getcwd(),'.config'))
@@ -2081,6 +2173,9 @@ def delete_old_configuration():
 
 
 def import_duplication_configuration():
+  """
+  Export the (private) configuration data needed to access your store from another machine.
+  """
   delete_old_configuration()
   
   if not os.path.isfile('strongbox_duplication_config.pickle'):
@@ -2146,9 +2241,9 @@ if __name__ == '__main__':
   if args.init:
     initialize_peer_configuration(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
   elif args.peer_client:
-    demo_client()
+    run_peer_client_only()
   elif args.peer_server:
-    demo_server()
+    run_peer_server_only()
   elif args.export_backup:
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_backup_configuration()
   elif args.import_backup:
