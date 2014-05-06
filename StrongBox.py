@@ -1,3 +1,4 @@
+#!/usr/bin/python
 """
 The peer class is really a lot bigger than I was expecting.
 """
@@ -54,7 +55,9 @@ class Peer:
                debug_preamble=None,
                _metadata=None,
                lock=threading.RLock(),
-               shutdown_signaled=threading.Event()
+               shutdown_signaled=threading.Event(),
+               private_key_contents=None,
+               aes_key=None
                ):
     """Initialize a `Peer` object."""
     
@@ -77,9 +80,9 @@ class Peer:
     
     self.initialize_directory_structure()
         
-    self.initialize_keys()
+    self.initialize_keys(private_key_contents)
     
-    self.load_metadata_file()
+    self.load_metadata_file(aes_key)
     
 
   def run(self, client_sleep_time=5):
@@ -102,11 +105,12 @@ class Peer:
       peer_client_thread.join(15)
       peer_server_thread.join(15-(time.time()-t_i))
       if peer_client_thread.is_alive() or peer_server_thread.is_alive():
-        self.debug_print( (1, 'Shutdown taking too long, forcibly quitting.') )
-        exit(1)
+        self.debug_print( (0, 'Shutdown taking too long, forcibly quitting.') )
+        peer_client_thread.__stop()
+        peer_server_thread.__stop()
   
 
-  def run_peer_client(self, sleep_time=5, socket_timeout=1):
+  def run_peer_client(self, sleep_time=1, socket_timeout=1):
     self.debug_print( (1, 'Peer client mode running.'))
     
     while not self.shutdown_signaled.is_set():      
@@ -187,7 +191,7 @@ class Peer:
           # FIXME: Not sure how we could get to the above line without having acquired the lock first...
           except RuntimeError:
             pass
-      
+
 
   def peer_server_session(self, skt_ssl, peer_address):
     self.debug_print( (2, 'Waiting for peer client\'s handshake message.'))    
@@ -338,19 +342,23 @@ class Peer:
   # Initialization methods #
   ##########################
   
-  def generate_initial_metadata(self):
+  def generate_initial_metadata(self, aes_key):
     """
     Generate a peer's important metadata the first time it is instantiated.
     """
     # FIXME: Just do full initialization here (i.e. including revision and tree data).
     
+    # Since we're doing initialization, make sure the store is empty for the first revision.
+    self.clear_store_contents()
+    
     peer_id = self.generate_peer_id()
-    store_id = self.generate_store_id()    
+    store_id = self.compute_store_id()    
     network_address = None # Automatically set upon running the peer
     own_revision_data = INVALID_REVISION # Automatically updated upon running the peer.
     merkel_tree = None # Running the peer will cause a check of the store which will populate this and sign a new revision
     initial_peers = set([peer_id])
-    aes_key = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
+    if not aes_key:
+      aes_key = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
     aes_iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
     
     # FIXME: Idempotently initialize/ensure personal directory structure here including initial revision number.
@@ -375,7 +383,7 @@ class Peer:
     return peer_id
     
 
-  def generate_store_id(self, public_key=None):
+  def compute_store_id(self, public_key=None):
     """
     Store IDs are meant to uniquely identify a store/user. They are essentially
     the RSA public key, but we use use their SHA-256 hash to "flatten" them to
@@ -414,14 +422,19 @@ class Peer:
     if not os.path.exists(self.store_keys_directory):
       os.makedirs(self.store_keys_directory)
     
-    self.peer_backups_directory = os.path.join(self.root_directory, 'peer_backups')
+    self.peer_backups_directory = os.path.join(self.root_directory, '.peer_backups')
     if not os.path.exists(self.peer_backups_directory):
       os.makedirs(self.peer_backups_directory)
     
     
-  def initialize_keys(self):
+  def initialize_keys(self, private_key_contents):
+    # Import, load, or generate the private key for this individual and their store.
     self.private_key_file = os.path.join(self.own_keys_directory, 'private_key.pem')
-    if os.path.isfile(self.private_key_file):
+    if private_key_contents:
+      with open(self.private_key_file, 'w') as f:
+        f.write(private_key_contents)
+      self.private_key = Crypto.PublicKey.RSA.importKey(private_key_contents)
+    elif os.path.isfile(self.private_key_file):
       with open(self.private_key_file, 'r') as f:
         self.private_key = Crypto.PublicKey.RSA.importKey(f.read())
     else:
@@ -429,7 +442,7 @@ class Peer:
       with open(self.private_key_file, 'w') as f:
         f.write(self.private_key.exportKey())
     
-    # Not sure we actually need to use the public key file...
+    # TODO: Don't believe we ever actually use the public key file.
     self.public_key_file = os.path.join(self.own_keys_directory, 'public_key.pem')
     if os.path.isfile(self.public_key_file):
       with open(self.public_key_file, 'r') as f:
@@ -450,9 +463,10 @@ class Peer:
           
 
   # TODO: De-uglify
-  # FIXME: PyDoc
-  # Use a file to permanently store certain metadata.
-  def load_metadata_file(self):
+  def load_metadata_file(self, aes_key):
+    """
+    Load important configuration metadata that must persist between executions.
+    """
     # Create a null metadata object to update against
     self._metadata = Metadata(None, None, None, None, None, None, None)
     
@@ -480,7 +494,7 @@ class Peer:
           raise Exception()
       except:
         self.debug_print( (2,'Backup metadata file not found. Generating new file.') )        
-        metadata = self.generate_initial_metadata()
+        metadata = self.generate_initial_metadata(aes_key)
         # Immediately write out to non-volatile storage since `update_metadata()` expects a pre-existing file to be made the backup.
         with open(self.metadata_file, 'w') as f:
           cPickle.dump(metadata, f)
@@ -858,7 +872,7 @@ class Peer:
     
     if not invalid:
       # Set the peer's revision for the store to match ours.
-      self.debug_print( (1, 'Syncing peer is now at revision {}'.format(self.store_dict[store_id].revision_data.revision_number)) )
+      self.debug_print( (1, 'Syncing peer is now verified to hold revision {}'.format(self.store_dict[store_id].revision_data.revision_number)) )
       peer_store_revisions[store_id] = self.store_dict[store_id].revision_data
     else:
       # Record the peer's revision for the store as `None`
@@ -1048,7 +1062,16 @@ class Peer:
 #     
 #     os.makedirs(path)
   
-  
+  def clear_store_contents(self):
+    store_contents = os.listdir(self.own_store_directory)
+    if store_contents:
+      delete_store_contents = raw_input('Store directory \'{}\' not empty. Okay to delete? [y/n] '.format(self.own_store_directory))
+      
+      if not delete_store_contents == 'y':
+        raise IOError()
+      else:
+        shutil.rmtree(self.own_store_directory)
+        os.makedirs(self.own_store_directory)
   #########################
   # Cryptographic methods #
   #########################
@@ -1119,7 +1142,7 @@ class Peer:
       return self.merkel_tree
     
     elif store_id == self.store_id:
-      # Compute a new encrypted, potentially nonced Merkel tree of our own store.
+      # Compute a new encrypted, nonced Merkel tree of our own store.
       merkel_tree = directory_merkel_tree.make_dmt(self._get_store_path(store_id), nonce=nonce, encrypter=self)
     else:
       # Make the Merkel tree.
@@ -1205,9 +1228,14 @@ class Peer:
     return Crypto.Signature.PKCS1_v1_5.new(public_key).verify(payload_hash, signature)
   
   def encrypt(self, plaintext):
-    # Have to reuse the IV because we're encrypting on the fly and need to be able to compare Merkel trees... vuln?
-    cipher = Crypto.Cipher.AES.new(self.aes_key, Crypto.Cipher.AES.MODE_CFB, self.aes_iv)
-    ciphertext = self.aes_iv + cipher.encrypt(plaintext)
+    # Deterministically generate the initialization vector in order to facilitate hash-based integrity checks of this
+    #  on-the-fly encrypted data. Do so by taking a hash of the unencrypted input mixed with our private key data.
+    # TODO: Have not examined the potential (in)security implications of this scheme for IV generation.
+    aes_iv_cipher = hashlib.sha256(plaintext)
+    aes_iv_cipher.update(self.private_key.exportKey())
+    aes_iv = aes_iv_cipher.digest()[0:Crypto.Cipher.AES.block_size]
+    cipher = Crypto.Cipher.AES.new(self.aes_key, Crypto.Cipher.AES.MODE_CFB, aes_iv)
+    ciphertext = aes_iv + cipher.encrypt(plaintext)
     return ciphertext
     
   def decrypt(self, ciphertext):
@@ -1705,19 +1733,20 @@ class Peer:
     self.update_network_address()
     with open('strongbox_backup_config.pickle', 'w') as f:
       cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey()) , f)
-    self.debug_print( (1, 'Public configuration data written to file \'./strongbox_backup_config.pickle\'.') )
+    self.debug_print( (0, 'Backup configuration data written to file \'./strongbox_backup_config.pickle\'.') )
     
-  def import_backup_configuration(self, config_file=None):
+  def import_backup_configuration(self, config_file=None, peer_id=None, network_address=None, public_key_contents=None):
     # TODO: Unify this and `manually_associate`.
-    if not config_file:
-      config_file = 'strongbox_backup_config.pickle'
+    if (not peer_id) or (not public_key_contents):
+      if not config_file:
+        config_file = 'strongbox_backup_config.pickle'
+        
+      if not os.path.isfile(config_file):
+        self.debug_print( (0, 'ERROR: File \'./strongbox_backup_config.pickle\' not found.') )
+        raise IOError()
       
-    if not os.path.isfile(config_file):
-      self.debug_print( (1, 'ERROR: File \'./strongbox_backup_config.pickle\' not found.') )
-      raise IOError()
-    
-    with open('strongbox_backup_config.pickle', 'r') as f:
-      peer_id, _, network_address, public_key_contents = cPickle.load(f)
+      with open('strongbox_backup_config.pickle', 'r') as f:
+        peer_id, _, network_address, public_key_contents = cPickle.load(f)
     
     # Write the public key data to storage so `manually associate()` can get it.
     if not os.path.isfile(self.get_peer_key_path(peer_id)):
@@ -1726,6 +1755,15 @@ class Peer:
         f.write(public_key_contents)
       
     self.manually_associate(peer_id, network_address, self.get_peer_key_path(peer_id))
+
+
+  def export_duplicate_configuration(self):
+    # Ensure we have a valid address to export
+    self.update_network_address()
+    with open('strongbox_duplicate_config.pickle', 'w') as f:
+      cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey(), self.private_key.exportKey(), self.aes_key) , f)
+    self.debug_print( (0, 'Duplicate configuration data written to file \'./strongbox_duplicate_config.pickle\'.') )
+  
   
   # TODO: Generalize a subset of this functionality to support the future scenario where a central server would initiate such an association.
   def manually_associate(self, peer_id, network_address, public_key_file):
@@ -1740,7 +1778,7 @@ class Peer:
     # Get the key object for the public key and generate the corresponding store ID.
     public_key = self.get_peer_key(peer_id)
     # Calculate the store ID that corresponds to this public key.
-    store_id = self.generate_store_id(public_key)
+    store_id = self.compute_store_id(public_key)
 
     if not os.path.isfile(self.get_store_key_path(store_id)):
       # Store another copy of the key assigned to its store ID.
@@ -1761,7 +1799,6 @@ class Peer:
       peers = set([peer_id, self.peer_id])
     
     store_data = StoreData(revision_data=revision_data, peers=peers)
-    
     
     # Create a copy of our `store_dict` for staging changes and insert the new metadata.
     store_dict = copy.deepcopy(self.store_dict)
@@ -1956,18 +1993,20 @@ def demo_B():
   peer_b.manually_associate(peer_a_id, 'ec2-54-87-72-190.compute-1.amazonaws.com', 'a_public_key.pem')
   peer_b.run()
 
-def demo_server():
-  peer_server = Peer(debug_verbosity=2, debug_preamble='Server:')
+#FIXME: Doesn't respect verbosity and directory overrides.
+def demo_server(debug_verbosity=2):
+  peer_server = Peer(debug_verbosity=debug_verbosity, debug_preamble='Peer server:')
   peer_server.update_network_address()
   peer_server.check_store()
   peer_server.run_peer_server()
   
-def demo_client():
-  peer_client = Peer(debug_verbosity=2, debug_preamble='Client:')
-  with open('a_metadata_file.pickle', 'r') as f:
-    peer_a_id = cPickle.load(f).peer_id
-    
-  peer_client.manually_associate(peer_a_id, 'ec2-54-87-72-190.compute-1.amazonaws.com', 'a_public_key.pem')
+#FIXME: Doesn't respect verbosity and directory overrides.
+def demo_client(debug_verbosity=2):
+  peer_client = Peer(debug_verbosity=debug_verbosity, debug_preamble='Peer client:')
+#   with open('a_metadata_file.pickle', 'r') as f:
+#     peer_a_id = cPickle.load(f).peer_id
+#     
+#   peer_client.manually_associate(peer_a_id, 'ec2-54-87-72-190.compute-1.amazonaws.com', 'a_public_key.pem')
   peer_client.update_network_address()
   peer_client.check_store()
   peer_client.run_peer_client(3)
@@ -1978,17 +2017,37 @@ def initialize_peer_configuration(own_store_directory=None, debug_verbosity=None
   if not debug_verbosity:
     debug_verbosity=0
     
+  delete_old_configuration()
+    
+  print 'Creating initial configuration for peer.'
+  Peer(own_store_directory=own_store_directory, debug_verbosity=debug_verbosity)
+  print 'Done.'
+  
+
+def delete_old_configuration():
   if os.path.isdir(os.path.join(os.getcwd(),'.config')):
     print 'Old configuration directory found. Deleting.'
     shutil.rmtree(os.path.join(os.getcwd(),'.config'))
   
-  if os.path.isdir(os.path.join(os.getcwd(),'peer_backups')):
+  if os.path.isdir(os.path.join(os.getcwd(),'.peer_backups')):
     print 'Old peer backups directory found. Deleting.'
-    shutil.rmtree(os.path.join(os.getcwd(),'peer_backups'))
+    shutil.rmtree(os.path.join(os.getcwd(),'.peer_backups'))
+
+
+def import_duplicate_configuration():
+  delete_old_configuration()
   
-  print 'Creating initial configuration for peer.'
-  Peer(own_store_directory=own_store_directory, debug_verbosity=debug_verbosity)
-  print 'Done.'
+  if not os.path.isfile('strongbox_duplicate_config.pickle'):
+    print 'ERROR: File \'./strongbox_duplicate_config.pickle\' not found.'
+    raise IOError()
+  
+  with open('strongbox_duplicate_config.pickle', 'r') as f:
+    peer_id, _, network_address, public_key_contents, private_key_contents, aes_key = cPickle.load(f)
+  
+  peer = Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity \
+              , private_key_contents=private_key_contents, aes_key=aes_key)
+  
+  peer.import_backup_configuration(peer_id=peer_id, network_address=network_address, public_key_contents=public_key_contents)
   
 
 message_ids = {'handshake_msg'     : 0,
@@ -2016,21 +2075,21 @@ unpicklers = {'handshake_msg'     : Peer.unpickle_handshake_msg,
               'public_key_msg'    : Peer.unpickle_public_key_msg
               }
 
-def main():
-  peer = Peer(debug_verbosity=1)
+def main(own_store_directory=None, debug_verbosity=None):
+  peer = Peer(own_store_directory, debug_verbosity)
   peer.run()
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='The StrongBox encrypted P2P backup program.')
 
   group = parser.add_mutually_exclusive_group()
-  group.add_argument('-i', '--init', action='store_true', help='Just initialize peer configuration, clearing any previous configuration if necessary.')
+  group.add_argument('-i', '--init', action='store_true', help='Generate new initial configuration data for this peer.')
   group.add_argument('-c', '--peer-client', action='store_true', help='Run in peer client mode only.')
   group.add_argument('-s', '--peer-server', action='store_true', help='Run in peer server mode only.')
   group.add_argument('--export-backup', action='store_true', help='Export the (public) configuration data another peer would need to act as a backup for your store.')
-  group.add_argument('--import-backup', action='store_true', help='Import the (public) configuration data needed to act as a backup for another store.')
-  group.add_argument('--export-private', action='store_true', help='Export the private configuration data for this store so you can set up access to the store on another machine.')
-  group.add_argument('--import-private', action='store_true', help='Import the private configuration data for your store generated on another machine.')
+  group.add_argument('--import-backup', action='store_true', help='Import the (public) configuration data needed to act as a backup for another peer\'s store.')
+  group.add_argument('--export-duplicate', action='store_true', help='Export the (private) configuration data needed to access your store from another machine.')
+  group.add_argument('--import-duplicate', action='store_true', help='Generate new initial configuration data for this peer, importing the (private) configuration needed to access your store from another machine here.')
 
   parser.add_argument('-d', '--debug-verbosity', default=0, type=int, help='Specify the verbosity of debugging messages.')
   # TODO: Optionally directing or "teeing" debug info to a log file would be nice, quite nice indeed.
@@ -2048,5 +2107,9 @@ if __name__ == '__main__':
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_backup_configuration()
   elif args.import_backup:
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_backup_configuration()
+  elif args.export_duplicate:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_duplicate_configuration()
+  elif args.import_duplicate:
+    import_duplicate_configuration()
   else:
-    main()
+    main(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
