@@ -20,7 +20,7 @@ import threading
 import time
 import Crypto.Signature.PKCS1_v1_5, Crypto.Hash, Crypto.Cipher.AES, Crypto.PublicKey.RSA, Crypto.Random
 import base64
-import directory_merkel_tree
+import DirectoryMerkelTree
 import subprocess
 import argparse
 
@@ -743,7 +743,7 @@ class Peer:
       
     self.debug_print( print_tuples )
     if (metadata.merkel_tree != self.merkel_tree) and (self.debug_verbosity >= 4):
-        directory_merkel_tree.print_tree(self.merkel_tree)
+        DirectoryMerkelTree.print_tree(self.merkel_tree)
     
     # Copy the previous metadata file to the backup location.
     shutil.copyfile(self.metadata_file, self.backup_metadata_file)
@@ -926,7 +926,7 @@ class Peer:
     new Merkel tree upon updates.
     """
     # Compute new Merkel tree from scratch.
-    new_merkel_tree = directory_merkel_tree.make_dmt(self.own_store_directory, encrypter=self)
+    new_merkel_tree = DirectoryMerkelTree.make_dmt(self.own_store_directory, encrypter=self)
     if (self.merkel_tree) and (self.merkel_tree == new_merkel_tree):
       return
     
@@ -1144,10 +1144,10 @@ class Peer:
     
     elif store_id == self.store_id:
       # Compute a new encrypted, nonced Merkel tree of our own store.
-      merkel_tree = directory_merkel_tree.make_dmt(self._get_store_path(store_id), nonce=nonce, encrypter=self)
+      merkel_tree = DirectoryMerkelTree.make_dmt(self._get_store_path(store_id), nonce=nonce, encrypter=self)
     else:
       # Make the Merkel tree.
-      merkel_tree = directory_merkel_tree.make_dmt(self._get_store_path(store_id), nonce=nonce)
+      merkel_tree = DirectoryMerkelTree.make_dmt(self._get_store_path(store_id), nonce=nonce)
     
     return merkel_tree
     
@@ -1159,7 +1159,7 @@ class Peer:
     """
     mt_new = self.get_merkel_tree(store_id)
     
-    updated, new, deleted = directory_merkel_tree.compute_tree_changes(mt_new, mt_old)
+    updated, new, deleted = DirectoryMerkelTree.compute_tree_changes(mt_new, mt_old)
     
     return updated.union(new), deleted
 
@@ -1426,7 +1426,7 @@ class Peer:
     self.debug_print( [(1, 'Sending Merkel tree to sync sender.'),
                        (4, 'merkel_tree :')] )
     if self.debug_verbosity >= 4:
-      directory_merkel_tree.print_tree(merkel_tree)
+      DirectoryMerkelTree.print_tree(merkel_tree)
     self.send_merkel_tree_msg(skt, sync_store_id, merkel_tree)   
     
     # Get and process all commands to update/create and delete files before proceeding to verification.
@@ -1486,7 +1486,7 @@ class Peer:
     self.debug_print( [(1, 'Received merkel tree to sync receiver.'),
                        (4, 'merkel_tree :')] )
     if self.debug_verbosity >= 4:
-      directory_merkel_tree.print_tree(merkel_tree)
+      DirectoryMerkelTree.print_tree(merkel_tree)
     
     updated_files, deleted_files = self.diff_store_to_merkel_tree(sync_store_id, merkel_tree)
     self.debug_print( [(2, 'updated_files = {}'.format(updated_files)),
@@ -1777,7 +1777,7 @@ class Peer:
 #                        (4, 'merkel_tree:')] )
 #     
 #     if self.debug_verbosity >= 4:
-#       directory_merkel_tree.print_tree(merkel_tree)
+#       DirectoryMerkelTree.print_tree(merkel_tree)
     
     return merkel_tree
   
