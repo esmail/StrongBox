@@ -1892,7 +1892,8 @@ class Peer:
     self.update_network_address()
     with open('strongbox_duplication_config.pickle', 'w') as f:
       cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey(), self.private_key.exportKey(), self.aes_key) , f)
-    self.debug_print( (0, 'Duplication configuration data written to file \'./strongbox_duplication_config.pickle\'.') )
+    self.debug_print( [(0, 'Duplication configuration data written to file \'./strongbox_duplication_config.pickle\'.'),
+                       (0, 'WARNING: This file contains the secret encryption keys used to identify you as the owner of your store, and decrypt your private data. Keep it secure.')] )
   
   
   # TODO: Generalize a subset of this functionality to support the future scenario where a central server would initiate such an association.
