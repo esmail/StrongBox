@@ -112,12 +112,17 @@ class Peer:
       self.shutdown_signaled.set()
       self.debug_print( (1, '\nShutdown signaled. Waiting for peer client and peer server threads to finish.') )
       t_i = time.time()
-      peer_client_thread.join(15)
+      peer_client_thread.join(13)
       peer_server_thread.join(15-(time.time()-t_i))
       if peer_client_thread.is_alive() or peer_server_thread.is_alive():
         self.debug_print( (0, 'Shutdown taking too long, forcibly quitting.') )
-        peer_client_thread._Thread__stop()
-        peer_server_thread._Thread__stop()
+        if peer_client_thread.is_alive():
+          peer_client_thread._Thread__stop()
+        if peer_server_thread.is_alive():
+          peer_server_thread._Thread__stop()
+    
+    if self.debug_verbosity == 0:
+      print # Print an empty new line for the terminal to come back to.
 
 
   def run_peer_client(self, sleep_time=1, socket_timeout=1):
@@ -2214,7 +2219,7 @@ unpicklers = {'handshake_msg'     : Peer.unpickle_handshake_msg,
               'sync_req'          : Peer.unpickle_sync_req,
               'merkel_tree_msg'   : Peer.unpickle_merkel_tree_msg,
               'update_file_msg'   : Peer.unpickle_update_file_msg,
-              'delete_file_req'   : Peer.unpickle_delete_file_msg,
+              'delete_file_msg'   : Peer.unpickle_delete_file_msg,
               'sync_complete_msg' : Peer.unpickle_sync_complete_msg,
               'verify_sync_req'   : Peer.unpickle_verify_sync_req, 
               'verify_sync_resp'  : Peer.unpickle_verify_sync_resp,
