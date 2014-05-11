@@ -225,6 +225,10 @@ class Peer:
           except RuntimeError:
             pass
 
+    # Close the listening socket
+    skt_listener.shutdown(socket.SHUT_RDWR)
+    skt_listener.close()
+
 
   def peer_server_session(self, skt_ssl, peer_address):
     """
