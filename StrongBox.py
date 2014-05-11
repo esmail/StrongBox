@@ -400,13 +400,19 @@ class Peer:
     # TODO: Just do full initialization here (i.e. including revision and tree data).
     
     # Since we're doing initialization, make sure the store is empty for the first revision.
-    self.clear_store_contents()
+    self.clear_own_store_contents()
     
     peer_id = self.generate_peer_id()
     store_id = self.compute_store_id()    
-    network_address = None # Automatically set upon running the peer
-    own_revision_data = INVALID_REVISION # Automatically updated upon running the peer.
-    merkel_tree = None # Running the peer will cause a check of the store which will populate this and sign a new revision
+    network_address = json.load(urlopen('http://httpbin.org/ip'))['origin'] # FIXME: Abstract this to a function.
+    merkel_tree = DirectoryMerkelTree.make_dmt(self.own_store_directory, encrypter=self)
+    # Prepare and sign the initial revision data.
+    revision_number = 1
+    store_hash = merkel_tree.dmt_hash
+    pickled_payload = cPickle.dumps( (revision_number, store_hash) )
+    signature = self.sign(pickled_payload)
+    own_revision_data = RevisionData(revision_number=revision_number, store_hash=store_hash, signature=signature)
+    
     initial_peers = set([peer_id])
     if not aes_key:
       aes_key = Crypto.Random.new().read(Crypto.Cipher.AES.key_size[-1])
@@ -940,10 +946,12 @@ class Peer:
     if (self.merkel_tree) and (self.merkel_tree == new_merkel_tree):
       return
     
-    if (self.store_dict[self.store_id].revision_data == INVALID_REVISION):
+    old_revision_data = self.get_revision_data(self.peer_id, self.store_id)
+    
+    if not self.verify_revision_data(self.store_id, old_revision_data) :
       revision_number = 1
     else:
-      revision_number = self.store_dict[self.store_id].revision_data.revision_number + 1
+      revision_number = old_revision_data.revision_number + 1
         
     # Our store has changed so get, sign, and record the new revision data.
     store_hash = new_merkel_tree.dmt_hash
@@ -1067,7 +1075,7 @@ class Peer:
     return file_contents
   
   
-  def clear_store_contents(self):
+  def clear_own_store_contents(self):
     """
     Remove any pre-existing data within the user's store directory in preparation 
     for initiating a new initial configuration and new initial store.
