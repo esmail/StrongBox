@@ -1198,6 +1198,7 @@ class Peer:
     
     peer_revision_data = self.get_revision_data(peer_id, store_id)
     
+    # TODO: Remove this.
     # The revision data's signature doesn't verify (we synced to a bad backup).
     if not self.verify_revision_data(store_id, peer_revision_data):
       self.debug_print( (1, 'WARNING: Synced to an invalid revision. Checks should have prevented this.') )
@@ -1209,14 +1210,15 @@ class Peer:
     
     # We successfully synced.
     if calculated_hash == signed_hash:
-      self.debug_print( [(1, 'New store contents verified by peer\'s signed revision data.'),
-                         (1, 'Updating our revision data to signed revision {}.'.format(peer_revision_data.revision_number))] )
-      self.update_own_store_revision(store_id, peer_revision_data)
+      if peer_revision_data != self.get_revision_data(self.peer_id, store_id):
+        self.debug_print( [(1, 'New store contents verified by peer\'s signed revision data.'),
+                           (1, 'Updating our revision data to signed revision {}.'.format(peer_revision_data.revision_number))] )
+        self.update_own_store_revision(store_id, peer_revision_data)
       return True
       
     # The sync failed.
     else:
-      self.debug_print( (1, 'New store contents could not be verified by peer\'s signed revision data. Marking our revision as invalid.') )
+      self.debug_print( (1, 'Store contents could not be independently verified. Marking our revision as invalid.') )
       self.update_own_store_revision(store_id, INVALID_REVISION)
       return False
 
@@ -1487,13 +1489,6 @@ class Peer:
     self.debug_print( (1, 'Sync data transfer complete. Proceeding to cooperative verification.') )
     self.sync_check(skt, sender_peer_id, sync_store_id)
     
-    # Locally verify the sync based on the signed revision data that we have recorded 
-    #  for the sync sender and update our revision number accordingly.
-    if not self.verify_sync(sender_peer_id, sync_store_id):
-      self.debug_print( (1, 'Local sync verification failed. Marking our copy of the store as invalid and disconnecting.') )
-      self.send_disconnect_req(skt, 'Local sync verification failed.')
-      raise ManualDisconnectException()
-    
     
   def sync_send(self, skt, receiver_peer_id, sync_store_id):
     """Conduct a sync as the sending party."""
@@ -1578,7 +1573,14 @@ class Peer:
       self.update_peer_revision(sync_peer_id, sync_store_id, invalid=True)
       self.send_disconnect_req(skt, 'Cooperative sync verification failed.')
       raise ManualDisconnectException()
-    
+
+    # Locally verify the sync based on the signed revision data that we have recorded 
+    #  for the syncing peer and update our revision number as needed.
+    if not self.verify_sync(sync_peer_id, sync_store_id):
+      self.debug_print( (1, 'Local sync verification failed. Marking our copy of the store as invalid and disconnecting.') )
+      self.send_disconnect_req(skt, 'Local sync verification failed.')
+      raise ManualDisconnectException()
+        
     
   ############################
   # Message dispatch methods #
