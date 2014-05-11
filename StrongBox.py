@@ -107,7 +107,7 @@ class Peer:
     peer_client_thread = threading.Thread(target=self.run_peer_client, args=())
     peer_client_thread.start()
     try:
-      time.sleep(2**31) # Just over 68 years.
+      time.sleep(2**30) # Just over 34 years.
     except (KeyboardInterrupt, SystemExit):
       self.shutdown_signaled.set()
       self.debug_print( (1, '\nShutdown signaled. Waiting for peer client and peer server threads to finish.') )
