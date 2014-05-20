@@ -152,13 +152,13 @@ def compute_tree_changes(dmt_new, dmt_old, directory_path=''):
   for filesystem_item in new_filesystem_items:
     item_path = directory_path + filesystem_item
     new.add(item_path)
-    new.update(get_all_paths(dmt_new.children[filesystem_item], directory_path))
+    new.update(get_all_paths(dmt_new.children[filesystem_item], item_path))
     
   # Compile the set of deleted files.
   for filesystem_item in deleted_filesystem_items:
     item_path = directory_path + filesystem_item
     deleted.add(item_path)
-    deleted.update(get_all_paths(dmt_old.children[filesystem_item], directory_path))
+    deleted.update(get_all_paths(dmt_old.children[filesystem_item], item_path))
   
   return updated, new, deleted
 
