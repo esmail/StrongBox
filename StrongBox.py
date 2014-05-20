@@ -13,6 +13,7 @@ import shutil
 import struct
 import inspect
 import json
+import httplib
 import copy
 from urllib2 import urlopen
 from collections import namedtuple
@@ -116,8 +117,8 @@ class Peer:
       self.shutdown_signaled.set()
       self.debug_print( (1, '\nShutdown signaled. Waiting for peer client and peer server threads to finish.') )
       t_i = time.time()
-      peer_client_thread.join(13)
-      peer_server_thread.join(15-(time.time()-t_i))
+      peer_client_thread.join(18)
+      peer_server_thread.join(20-(time.time()-t_i))
       if peer_client_thread.is_alive() or peer_server_thread.is_alive():
         self.debug_print( (0, 'Shutdown taking too long, forcibly quitting.') )
         if peer_client_thread.is_alive():
@@ -137,12 +138,12 @@ class Peer:
       print # Print an empty new line for the terminal to come back to.
 
 
-  def run_peer_client(self, sleep_time=1, socket_timeout=3):
+  def run_peer_client(self, sleep_time=1, socket_timeout=1):
     """
     The peer client thread periodically reaches out to other peers to enact synchronizations.
     """
     
-    # TODO: Figure out why running this function as a thread causes the following modules to be set to `None`
+    # TODO: Figure out why running this function as a thread causes the following modules to be sometimes set to `None`
     import socket
     
     try: 
@@ -152,18 +153,21 @@ class Peer:
         # Find a peer with which to connect to and initiate a session.
         server_peer_id = self.select_sync_peer()
         
-        if server_peer_id:
+        if server_peer_id and self.lock.acquire(blocking=False):
           try:        
             self.debug_print( [(1, 'Attempting to connect to peer server.'),
                                (1, 'network_address = {}'.format(self.peer_dict[server_peer_id].network_address)),
                                (2, 'server_peer_id = {}'.format([server_peer_id]))] )
   
-            # FIXME: There's got to be something more sensible than this crap shoot... Maybe use queues.
-            if not self.lock.acquire(blocking=False):
-              time.sleep(5)
-              if not self.lock.acquire(blocking=False):
-                raise socket.timeout()
-              
+#             # FIXME: There's got to be something more sensible than this crap shoot... Maybe use queues.
+#             if not self.lock.acquire(blocking=False):
+#               time.sleep(socket_timeout)
+#               if not self.lock.acquire(blocking=False):
+#                 raise socket.timeout()
+
+            # With lock in hand, check if there have been local changes to our store.
+            self.check_store() # TODO: This is an intensive operation. Instead watch the filesystem for changes and mark with a "dirty" flag.
+            
             skt_ssl = self.connect_to_peer(server_peer_id, socket_timeout)
             try:
               self.debug_print( (1, 'Successfully connected to peer server. Initiating peer client session.') )
@@ -174,10 +178,11 @@ class Peer:
               self.debug_print( (2, 'The peer client session did not complete in a successful sync.') )
             finally:
               try:
+                skt_ssl.settimeout(.1)
                 skt_ssl.shutdown(socket.SHUT_RDWR)
                 skt_ssl.close()
               except socket.error:
-                self.debug_print( (3, 'Socket already closed by peer server.') )
+                self.debug_print( (2, 'Socket already closed by peer server.') )
               
             self.debug_print( (1, 'Disconnected from peer server.') )
           except (socket.timeout, socket.error):
@@ -195,7 +200,6 @@ class Peer:
         self.debug_print( (1, 'Peer client mode going to sleep.') )
         time.sleep(sleep_time)
         self.debug_print( (1, 'Peer client mode waking up.') )
-        self.check_store() # TODO: This is an intensive operation. Instead watch the filesystem for changes and mark with a "dirty" flag.
         self.update_network_address()
     except:
       import sys, traceback
@@ -204,13 +208,13 @@ class Peer:
       traceback.print_exception(etype, value, tb)
     
      
-  def run_peer_server(self, socket_timeout=5):
+  def run_peer_server(self, socket_timeout=10):
     """
     The peer server thread listens for and services connections from other peers.
     """
     
     # TODO: Figure out why running this function as a thread causes the following modules to be set to `None`
-    import socket, sys, Queue
+    import socket
 
     try:
       self.debug_print( (1, 'Peer server mode running.'))
@@ -218,14 +222,12 @@ class Peer:
       
       while not self.shutdown_signaled.is_set():      
         self.debug_print( (1, 'Waiting for a peer client to connect.') )
-        # TODO: Will want to deal with multiple peer clients eventually.
+        
         try:
           skt_raw, (peer_address, _) = skt_listener.accept()
           
           # FIXME: There's got to be something more sensible than this crap shoot... Maybe use queues.
           if not self.lock.acquire(blocking=False):
-            time.sleep(5)
-            if not self.lock.acquire(blocking=False):
               raise socket.timeout()
             
           self.debug_print( (1, 'Connected to a peer client from \'{}\'. Initiating peer server session.'.format(peer_address)))      
@@ -238,6 +240,7 @@ class Peer:
             self.debug_print( (2, 'The peer server session did not complete in a successful sync.') )
           finally:
             try:
+              skt_ssl.settimeout(.1)
               skt_ssl.shutdown(socket.SHUT_RDWR)
               skt_ssl.close()
             except socket.error:
@@ -247,13 +250,13 @@ class Peer:
         except (socket.timeout, socket.error):
           pass
         finally:
-            try:
-              # FIXME: Quick hack to ensure the recursive lock is fully released. Need to identify how multiple acquisition might occur.
-              while True:
-                self.lock.release()
-            # FIXME: Not sure how we could get to the above line without having acquired the lock first...
-            except RuntimeError:
-              pass
+          try:
+            # FIXME: Quick hack to ensure the recursive lock is fully released. Need to identify how multiple acquisition might occur.
+            while True:
+              self.lock.release()
+          # FIXME: Not sure how we could get to the above line without having acquired the lock first...
+          except RuntimeError:
+            pass
   
       # Close the listening socket
       skt_listener.shutdown(socket.SHUT_RDWR)
@@ -433,8 +436,8 @@ class Peer:
     self.clear_own_store_contents()
     
     peer_id = self.generate_peer_id()
-    store_id = self.compute_store_id()    
-    network_address = json.load(urlopen('http://httpbin.org/ip'))['origin'] # FIXME: Abstract this to a function.
+    store_id = self.compute_store_id()
+    network_address = self.get_public_network_address( )
     merkel_tree = DirectoryMerkelTree.make_dmt(self.own_store_directory, encrypter=self)
     # Prepare and sign the initial revision data.
     revision_number = 1
@@ -898,6 +901,15 @@ class Peer:
       if set(gossip_peer_stores).intersection(our_stores):
         self.record_peer_data(peer_id, gossip_peer_dict[peer_id], True)
     
+  def get_public_network_address(self):
+    # TODO: Figure out a fallback for this
+    network_address = None
+    while not network_address:
+      try:
+        network_address = json.load(urlopen('http://httpbin.org/ip'))['origin']
+      except httplib.BadStatusLine:
+        pass
+    return network_address
     
   def update_network_address(self, lock=False):
     """Update this peer's already existing IP address data."""
@@ -907,7 +919,7 @@ class Peer:
     
     # Get and store the IP address
     # FIXME: Would like to sign this data (probably the whole `PeerData` object).
-    network_address = json.load(urlopen('http://httpbin.org/ip'))['origin']
+    network_address = self.get_public_network_address()
     peer_data = PeerData(network_address, peer_dict[self.peer_id].store_revisions)
     peer_dict[self.peer_id] = peer_data
     
@@ -1185,10 +1197,10 @@ class Peer:
     return signed_revision_data
   
   
-  def get_merkel_tree(self, store_id, nonce=None):
+  def get_merkel_tree(self, store_id, nonce=None, fresh=False):
     """Get the locally computed Merkel tree for a store."""
-    # Own store without nonce
-    if (store_id == self.store_id) and (not nonce):
+    # Pre-existing tree for own store without nonce
+    if (store_id == self.store_id) and (not nonce) and (not fresh):
       return self.merkel_tree
     
     elif store_id == self.store_id:
@@ -1213,11 +1225,12 @@ class Peer:
     return updated.union(new), deleted
 
 
-  def get_store_hash(self, store_id, nonce=''):
+  # TODO: Throws away the expensively computed Merkel tree, remove.
+  def get_store_hash(self, store_id, nonce='', fresh=False):
     """
     Retrieve the overall hash value for the user's store utilizing a nonce as needed.
     """
-    merkel_tree = self.get_merkel_tree(store_id, nonce)
+    merkel_tree = self.get_merkel_tree(store_id, nonce, fresh)
     return merkel_tree.dmt_hash
 
 
@@ -1229,14 +1242,13 @@ class Peer:
     
     peer_revision_data = self.get_revision_data(peer_id, store_id)
     
-    # TODO: Remove this.
     # The revision data's signature doesn't verify (we synced to a bad backup).
     if not self.verify_revision_data(store_id, peer_revision_data):
       self.debug_print( (1, 'WARNING: Synced to an invalid revision. Checks should have prevented this.') )
       self.update_own_store_revision(store_id, INVALID_REVISION)
       return False
     
-    calculated_hash = self.get_store_hash(store_id)
+    calculated_hash = self.get_store_hash(store_id, fresh=True)
     signed_hash = peer_revision_data.store_hash
     
     # We successfully synced.
@@ -1246,7 +1258,7 @@ class Peer:
                            (1, 'Updating our revision data to signed revision {}.'.format(peer_revision_data.revision_number))] )
         self.update_own_store_revision(store_id, peer_revision_data)
       return True
-      
+    
     # The sync failed.
     else:
       # Mark our revision as invalid if not dealing with our store, or if the peer has a newer revision than us.
@@ -1527,7 +1539,7 @@ class Peer:
     self.debug_print( (1, 'Received sync complete message from sync sender.') )
     
     # Participate in the post-sync check.
-    self.debug_print( (1, 'Sync data transfer complete. Proceeding to cooperative verification.') )
+    self.debug_print( (1, 'All sync data received. Proceeding to cooperative verification.') )
     self.sync_check(skt, sender_peer_id, sync_store_id)
     
     
@@ -1640,7 +1652,21 @@ class Peer:
     pickled_payload = cPickle.dumps(message_data)
     message_body = (message_id, pickled_payload)
     pickled_message = cPickle.dumps(message_body)
-    skt.send(struct.pack('!I', PROTOCOL_VERSION)+struct.pack('!I', len(pickled_message))+pickled_message)
+    
+    # Send the protocol version and message body length
+    message_length = len(pickled_message)
+    skt.send(struct.pack('!I', PROTOCOL_VERSION)+struct.pack('!I', message_length))
+    
+    # Send the message body in blocks.
+    max_send_size = 8192 # By setting a cap on the size of the blocks we send, we keep the socket active and prevent it from timing out.
+    length_sent = 0
+    while length_sent < message_length:
+      length_remaining = message_length - length_sent
+      send_size = min(length_remaining, max_send_size)
+      skt.send(pickled_message[length_sent:length_sent+send_size])
+      length_sent += send_size
+    
+    assert length_sent == message_length
     
   def send_handshake_msg(self, skt):
     """
@@ -1740,9 +1766,10 @@ class Peer:
       message_buffer += skt.recv(INT_PACK_SIZE - length_received)
       length_received = len(message_buffer)
     
-    # Unpack the protocol version
+    # Unpack the protocol version.
     protocol_version = struct.unpack('!I',message_buffer[0:INT_PACK_SIZE])[0]
     
+    # Check the protocol version.
     if protocol_version != PROTOCOL_VERSION:
       self.debug_print( (1, 'WARNING: Received message with protocol version \'{}\' instead of \'{}\'.'.format(protocol_version,PROTOCOL_VERSION)))
       # TODO: Find a meaningful exception for this.
@@ -1757,8 +1784,12 @@ class Peer:
     length = struct.unpack('!I',message_buffer[INT_PACK_SIZE:(INT_PACK_SIZE * 2)])[0]
     
     # Retrieve the message body.
-    while length_received < (length + (INT_PACK_SIZE * 2)):
-      message_buffer += skt.recv((length + (INT_PACK_SIZE * 2)) - length_received)
+    max_recv_size = 8192 # By setting a cap on the size of the blocks we receive, we keep the socket active and prevent it from timing out.
+    total_length = length + (INT_PACK_SIZE * 2)
+    while length_received < total_length:
+      length_remaining = total_length - length_received
+      recv_size = min(length_remaining, max_recv_size)
+      message_buffer += skt.recv(recv_size)
       length_received = len(message_buffer)
     
     # Message has incorrect length.
@@ -1800,7 +1831,7 @@ class Peer:
       raise ManualDisconnectException()
     else:
       self.debug_print_bad_message(message_id, pickled_payload)
-      raise Exception()
+      raise ManualDisconnectException()
 
 
   def unpickle(self, message_type, pickled_payload):
@@ -2151,7 +2182,7 @@ class Peer:
     
 
 def test_ssl():
-  print 'Executing peer connection test.'
+  print 'Executing peer connection test_DirectoryMerkelTree.'
   client = Peer(debug_verbosity=1, debug_preamble='Peer Client:')
   server = Peer(debug_verbosity=1, debug_preamble='Peer Server:')
   
@@ -2164,7 +2195,7 @@ def test_ssl():
 
 
 def test_handshake():
-  print 'Executing peer handshake test.'
+  print 'Executing peer handshake test_DirectoryMerkelTree.'
   client = Peer(debug_verbosity=5, debug_preamble='Peer Client:')
   server = Peer(debug_verbosity=5, debug_preamble='Peer Server:')
   
