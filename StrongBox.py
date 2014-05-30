@@ -34,7 +34,7 @@ import argparse
 PeerData = namedtuple('PeerData', 'network_address, store_revisions')
 StoreData = namedtuple('StoreData', 'revision_data, peers')
 RevisionData = namedtuple('RevisionData', 'revision_number, store_hash, signature')
-Metadata = namedtuple('Metadata', 'peer_id, peer_dict, store_id, store_dict, aes_key, aes_iv, merkel_tree')
+Metadata = namedtuple('Metadata', 'peer_id, peer_dict, store_id, store_dict, encryption_key, aes_iv, merkel_tree')
 
 
 # Necessary constants for messaging
@@ -712,11 +712,11 @@ class Peer:
   
   
   @property
-  def aes_key(self):
+  def encryption_key(self):
     """
     The AES key used for encrypting a user's store data before transmission.
     """
-    return self.metadata.aes_key
+    return self.metadata.encryption_key
   
   
   # FIXME: Remove.
@@ -778,10 +778,10 @@ class Peer:
     if metadata.store_dict != self.store_dict:
       print_tuples.append( (2, '`store_dict` updated') )
       print_tuples.append( (3, 'store_dict = {}'.format(metadata.store_dict)) )
-    if metadata.aes_key != self.aes_key:
-      print_tuples.append( (2, '`aes_key` updated') )
+    if metadata.encryption_key != self.encryption_key:
+      print_tuples.append( (2, '`encryption_key` updated') )
       print_tuples.append( (4, '!!!! SOOOoo INSECURE !!!!') )
-      print_tuples.append( (4, 'aes_key = {}'.format([metadata.aes_key])) )
+      print_tuples.append( (4, 'encryption_key = {}'.format([metadata.encryption_key])) )
     if metadata.aes_iv != self.aes_iv:
       print_tuples.append( (2, '`aes_iv` updated') )
       print_tuples.append(  (4, '!!!! SOOOoo INSECURE !!!!') )
@@ -851,7 +851,7 @@ class Peer:
     
     # Enact the update.
     peer_dict[peer_id] = PeerData(network_address, store_revisions)
-    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.aes_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
     self.update_metadata(metadata, True)
 
   
@@ -924,7 +924,7 @@ class Peer:
     peer_dict[self.peer_id] = peer_data
     
     # Enact the change.
-    metadata = Metadata(self.peer_id, peer_dict, self.store_id, self.store_dict, self.aes_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
     self.update_metadata(metadata, True)
     
     
@@ -975,7 +975,7 @@ class Peer:
     self.record_peer_data(self.peer_id, peer_data)
     
     # Enact the change
-    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, store_dict, self.aes_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
     self.update_metadata(metadata, True)
     
     
@@ -1006,7 +1006,7 @@ class Peer:
     self.update_own_store_revision(self.store_id, revision_data)
     
     # Also store the new Merkel tree.
-    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, self.store_dict, self.aes_key, self.aes_iv, new_merkel_tree)
+    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, new_merkel_tree)
     self.update_metadata(metadata)
     
     self.debug_print( (1, 'Change detected in own store. New signed revision number: {}'.format(revision_number)) )
@@ -1055,17 +1055,17 @@ class Peer:
         f.write(file_contents)
 
 
-  def store_delete_item(self, store_id, relative_path):
+  def store_delete_item(self, store_id, item_relative_path):
     """
     Delete a file or directory from a locally held store (either the user's or 
     a backup of another user's store).
     """
     if store_id == self.store_id:
       # Undo the path encryption done while creating our Merkel tree.
-      relative_path = self.decrypt_own_store_path(relative_path)
-      self.debug_print( [(2, 'relative_path (decrypted) = {}'.format(relative_path))] )
+      item_relative_path = self.decrypt_own_store_path(item_relative_path)
+      self.debug_print( [(2, 'item_relative_path (decrypted) = {}'.format(item_relative_path))] )
       
-    path = os.path.join(self._get_store_path(store_id), relative_path)
+    path = os.path.join(self._get_store_path(store_id), item_relative_path)
     
     if os.path.isfile(path):
       self.debug_print( (1, 'Deleting file from store.') )
@@ -1094,20 +1094,20 @@ class Peer:
     return decrypted_relative_path
 
 
-  def store_get_item_contents(self, store_id, relative_path):
+  def store_get_item_contents(self, store_id, item_relative_path):
     """
     Get the contents of a file (or return `None` for a directory) in preparation for
     transmission, recording on-the-fly if the item originates from the user's store.
     """
     
     # Directory
-    if relative_path[-1] == '/':
+    if item_relative_path[-1] == '/':
       return None
     if store_id == self.store_id:
       # Undo the path encryption done while creating our Merkel tree.
-      relative_path = self.decrypt_own_store_path(relative_path)
+      item_relative_path = self.decrypt_own_store_path(item_relative_path)
     
-    path = os.path.join(self._get_store_path(store_id), relative_path)
+    path = os.path.join(self._get_store_path(store_id), item_relative_path)
     
     with open(path, 'r') as f:
       file_contents = f.read()
@@ -1318,7 +1318,7 @@ class Peer:
     aes_iv_cipher = hashlib.sha256(plaintext)
     aes_iv_cipher.update(self.private_key.exportKey())
     aes_iv = aes_iv_cipher.digest()[0:Crypto.Cipher.AES.block_size]
-    cipher = Crypto.Cipher.AES.new(self.aes_key, Crypto.Cipher.AES.MODE_CFB, aes_iv)
+    cipher = Crypto.Cipher.AES.new(self.encryption_key, Crypto.Cipher.AES.MODE_CFB, aes_iv)
     ciphertext = aes_iv + cipher.encrypt(plaintext)
     return ciphertext
 
@@ -1328,7 +1328,7 @@ class Peer:
     Decrypt AES-encrypted data.
     """
     aes_iv = ciphertext[:Crypto.Cipher.AES.block_size]
-    cipher = Crypto.Cipher.AES.new(self.aes_key, Crypto.Cipher.AES.MODE_CFB, aes_iv)
+    cipher = Crypto.Cipher.AES.new(self.encryption_key, Crypto.Cipher.AES.MODE_CFB, aes_iv)
     plaintext = cipher.decrypt(ciphertext)[Crypto.Cipher.AES.block_size:]
     return plaintext
 
@@ -1379,12 +1379,12 @@ class Peer:
     
     potential_stores = set()
     
-    # Consider stores which the peer server has a later revision for.
+    # Consider stores which the peer server is more up to date.
     for store_id in mutual_stores:
       if self.gt_revision_data(store_id, peer_store_revisions[store_id], self.store_dict[store_id].revision_data):
         potential_stores.add(store_id)
         
-    # If the peer server doesn't have any updates for us, consider updates we have for them.
+    # If the peer server doesn't have any updates for us, look for updates we might have for them.
     if not potential_stores:
       for store_id in mutual_stores:
         if self.gt_revision_data(store_id, self.store_dict[store_id].revision_data, peer_store_revisions[store_id]):
@@ -1400,11 +1400,8 @@ class Peer:
           potential_stores.add(store_id)
 
     # Return `None` if we couldn't find a store to sync.
-    if (not potential_stores) and (not mutual_stores):
+    if not potential_stores:
       return None
-    elif not potential_stores:
-      # This might include store for which neither party is known to hold a valid revision.
-      return mutual_stores
     # Otherwise, choose a random store from the determined options.
     return random.sample(potential_stores, 1)[0]
   
@@ -1982,7 +1979,7 @@ class Peer:
     # Ensure we have a valid address to export
     self.update_network_address()
     with open('strongbox_duplication_config.pickle', 'w') as f:
-      cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey(), self.private_key.exportKey(), self.aes_key) , f)
+      cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey(), self.private_key.exportKey(), self.encryption_key) , f)
     self.debug_print( [(0, 'Duplication configuration data written to file \'./strongbox_duplication_config.pickle\'.'),
                        (0, 'WARNING: This file contains the secret encryption keys used to identify you as the owner of your store, and decrypt your private data. Keep it secure.')] )
   
@@ -2053,7 +2050,7 @@ class Peer:
       peer_dict[self.peer_id] = peer_data
     
     # Enact the changes.
-    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.aes_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
     self.update_metadata(metadata)
     
     
@@ -2107,8 +2104,7 @@ class Peer:
     self.debug_print( (1, 'Unexpected message received.'))
     
     # Lookup by value, an abuse of the dictionary type...
-    # FIXME: Use `iteritems()` instead of `items()`
-    message_type = [m_type for m_type, m_id in message_ids.items() if m_id == message_id][0]
+    message_type = [m_type for m_type, m_id in message_ids.iteritems() if m_id == message_id][0]
     
     # Allow this message type's unpickler the opportunity to debug print a description of the message.
     self.unpickle(message_type, pickled_payload)
