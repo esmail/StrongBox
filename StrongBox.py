@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
 The StrongBox encrypted P2P backup program. Run `python StrongBox.py -h` for details on how to execute.
 """
