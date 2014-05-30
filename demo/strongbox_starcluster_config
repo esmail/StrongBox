@@ -1,0 +1,46 @@
+####################################
+## StarCluster Configuration File ##
+####################################
+
+# Tested on StarCluster 0.95.5
+# To create a cluster for testing StrongBox, run the command:
+#starcluster -c strongbox_starcluster_config start strongbox_cluster
+
+# Once you're finished testing, you can shut down the cluster with the command:
+#starcluster terminate strongbox_cluster
+
+# Lastly, to verify that you won't be charged by Amazon for keeping any idle clusters up, list your running clusters with the command:
+#starcluster listclusters
+
+[global]
+DEFAULT_TEMPLATE=strongbox_cluster
+
+[aws info]
+# Find this under "Access Keys" at https://console.aws.amazon.com/iam/home?#security_credential
+AWS_ACCESS_KEY_ID = You, complete me.
+AWS_SECRET_ACCESS_KEY = You, complete me.
+# Find this under "Account Identifiers" at https://console.aws.amazon.com/iam/home?#security_credential
+AWS_USER_ID= You, complete me.
+
+[key aws]
+KEY_LOCATION=~/.ssh/aws
+
+[cluster strongbox_cluster]
+KEYNAME = aws
+CLUSTER_SIZE = 3
+CLUSTER_USER = sgeadmin
+CLUSTER_SHELL = bash
+NODE_IMAGE_ID = ami-3393a45a
+NODE_INSTANCE_TYPE = t1.micro
+PLUGINS = strongbox
+PERMISSIONS = strongbox_protocol
+DISABLE_QUEUE=True
+
+[permission strongbox_protocol]
+FROM_PORT = 51338
+TO_PORT = 51338
+
+[plugin strongbox]
+setup_class = starcluster.plugins.pypkginstaller.PyPkgInstaller
+packages = pycrypto
+#           ,git+https://github.com/esmail/StrongBox.git
