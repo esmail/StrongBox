@@ -1,9 +1,43 @@
-# By Esmail Fadae
+# By Esmail Fadae.
 
 import os, hashlib, Crypto.Random, Crypto.PublicKey, Crypto.Cipher.AES, Crypto.Hash.SHA256, Crypto.Signature, cPickle, base64
 from PeerConfiguration import PeerConfiguration
 from StrongBox import RevisionData, INVALID_REVISION
+
+# FIXME: This is a shitty, shitty name for this class.
 class Encrypter():
+
+  def __init__(self,
+               logger,
+               encryption_key,
+               config_directory,
+               peer_id=None,
+               store_id=None):
+    
+    self.logger = logger
+    self.encryption_key = encryption_key
+    self.config_directory = config_directory
+    
+    # Load or generate the private and public keys.
+    self.private_key = self.load_private_key(self.config_directory)
+    self.public_key = self.load_public_key(self.config_directory, self.private_key)
+    
+    # Set defaults and incoming overrides.
+    if store_id is None:
+      store_id = self.generate_store_id(self.public_key)
+    self.store_id = store_id
+    
+    if peer_id is None:
+      peer_id = self.generate_peer_id()
+    self.peer_id = peer_id
+    
+
+  @staticmethod
+  def generate_encryption_key():
+    key_size = Crypto.Cipher.AES.key_size[-1] # The maximum `pycrypto` supports (32 bytes a.k.a. 256 bits as of 2014.05.20)
+    encryption_key = Crypto.Random.new().read(key_size)
+    return encryption_key
+    
 
   def generate_peer_id(self):
     """
@@ -32,12 +66,6 @@ class Encrypter():
     self.logger.debug_print( (2, 'Generated new store ID: {}'.format([store_id])) )
     return store_id
     
-  @staticmethod
-  def generate_encryption_key():
-    key_size = Crypto.Cipher.AES.key_size[-1] # The maximum `pycrypto` supports (32 bytes a.k.a. 256 bits as of 2014.05.20)
-    encryption_key = Crypto.Random.new().read(key_size)
-    return encryption_key
-    
   @classmethod
   def load_public_key(cls, config_directory, private_key=None):
     if private_key is None:
@@ -53,11 +81,24 @@ class Encrypter():
     if store_id == self.store_id:
       store_key = self.public_key
     else:
-      store_key_file = PeerConfiguration.get_peer_store_key_file(store_id, self.config_directory)
+      store_key_file = PeerConfiguration.get_foreign_store_key_file(store_id, self.config_directory)
       with open(store_key_file, 'r') as f:
         store_key = Crypto.PublicKey.RSA.importKey(f.read())
     
     return store_key
+  
+  def load_peer_key(self, peer_id):
+    """
+    Convenience function to load a peer's public key.
+    """
+    if peer_id == self.peer_id:
+      public_key = self.public_key
+    else:
+      peer_key_file = PeerConfiguration.get_foreign_peer_key_file(peer_id, self.config_directory)
+      with open(peer_key_file, 'r') as f:
+        public_key = Crypto.PublicKey.RSA.importKey(f.read())
+    return public_key  
+    
   
   @staticmethod
   def load_private_key(config_directory):
@@ -75,31 +116,18 @@ class Encrypter():
     
     return private_key
   
-  def __init__(self,
-               logger,
-               encryption_key,
-               config_directory,
-               store_id=None,
-               peer_id=None):
-    self.logger = logger
-    self.encryption_key = encryption_key
-    self.config_directory = config_directory
-    self.private_key = self.load_private_key(self.config_directory)
-    self.public_key = self.load_public_key(self.config_directory, self.private_key)
-    
-    # Set defaults and incoming overrides.
-    if store_id is None:
-      store_id = self.generate_store_id(self.public_key)
-    # Make sure the store ID and encryption key match.
-    elif store_id != self.generate_store_id(self.public_key):
+  @property
+  def store_id(self):
+    return self._store_id
+  @store_id.setter
+  def store_id(self, value):
+    # Make sure the store ID and public key match.
+    if value != self.generate_store_id(self.public_key):
       raise RuntimeError('Store ID and encryption key do not match.')
-    self.store_id = store_id
-    
-    if peer_id is None:
-      peer_id = self.generate_peer_id()
-    self.peer_id = peer_id
-    
-    
+    elif value != self.store_id: 
+      self._store_id = value
+  
+  
   def sign(self, payload):
     """
     Convenience primative for computing a signature for any string.
@@ -130,14 +158,12 @@ class Encrypter():
   
   def verify_revision_data(self, store_id, revision_data):
     """
-    Verify the signature of a received revision number.
+    Verify the validity and signature of revision data.
     """
-    
     if (revision_data == INVALID_REVISION) or (not revision_data.signature):
       return False
     
     pickled_payload = cPickle.dumps( (revision_data.revision_number, revision_data.store_hash) )
-    
     return self.verify(store_id, revision_data.signature, pickled_payload)
   
   
@@ -170,18 +196,34 @@ class Encrypter():
     encrypted_filename = self.encrypt(filename)
     return self.compute_safe_filename(encrypted_filename)
 
-  
+
   def decrypt_filename(self, safe_encrypted_filename):
     encrypted_filename = base64.urlsafe_b64decode(safe_encrypted_filename)
     filename = self.decrypt(encrypted_filename)
     return filename
 
 
+  def decrypt_own_store_path(self, encrypted_relative_path):
+    """
+    Convert an encrypted, store-relative path to its original form.
+    """
+    print_tuples = [ (1, 'encrypted_relative_path = {}'.format(encrypted_relative_path)) ]
+    
+    encrypted_path_elements = encrypted_relative_path.split('/')
+    decrypted_path_elements = [self.decrypt_filename(e) for e in encrypted_path_elements]
+    decrypted_relative_path = '/'.join(decrypted_path_elements)
+    
+    print_tuples.append( (1, 'decrypted_relative_path = {}'.format(decrypted_relative_path)) )
+    self.logger.debug_print(print_tuples)
+    
+    return decrypted_relative_path
+
+
   @staticmethod   
-  def compute_safe_filename(self, input_string):
+  def compute_safe_filename(input_string):
     """
     Take any string of characters (e.g. the result of a SHA hash) and reversibly 
     convert it to a valid filename.
     """
     return base64.urlsafe_b64encode(input_string)
-  
+

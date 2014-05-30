@@ -1,3 +1,5 @@
+# By Esmail Fadae with inspiration from https://github.com/sangeeths/merkle-tree
+
 import os
 from os import path
 from os import listdir
@@ -78,6 +80,7 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
   dmt_tree = DirectoryMerkelTree(dmt_hash=tree_hash.digest(), children=children)
   return dmt_tree
 
+# FIXME: Allow this to optionally accumulate output in a string.
 def print_tree(tree):
   """
   Recursively print out the hash of the tree, the tree's contents, and the 

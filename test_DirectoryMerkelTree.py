@@ -2,7 +2,7 @@ import unittest
 import DirectoryMerkelTree
 import os, shutil
 
-# These need to be set by the class method `setUpClass` and accessed by the test methods. 
+# These need to be set by the class method `setUpClass` and accessed by the test methods.
 updated_dirs = set()
 new_dirs = set()
 tree_original = None
@@ -19,7 +19,7 @@ class TestDirectoryMerkelTree(unittest.TestCase):
   new_files = {'new_0', 'upd_1/new_1', 'newdir_0/new_2'}
   deleted_files = {'deleted_0', 'upd_2/deleted_1', 'del_0/deleted_2'}
   deleted_dirs = {'del_0/', 'del_1/'}
-  
+
   @staticmethod
   def get_parent_dirs(path):
     parent_dirs = set()
@@ -28,16 +28,17 @@ class TestDirectoryMerkelTree(unittest.TestCase):
       parent_dirs.add(p_dir+'/')
       p_dir = os.path.dirname(p_dir)
     return parent_dirs
-    
+
+  # Reusable expensive set up.
   @classmethod
   def setUpClass(cls):
     # Globals that will be mutated.
     global updated_dirs, new_dirs, tree_original, tree_modified
-    
-    # Create a temporary directory for test files.
+
+    # Create and enter a temporary directory for test files.
     os.mkdir(cls.test_dir)
     os.chdir(cls.test_dir)
-    
+
     # The subdirectory 'original' will act as the initial state.
     os.mkdir(cls.original_dir)
     for original_file in cls.unmodified_files.union(cls.updated_files).union(cls.deleted_files):
@@ -54,7 +55,7 @@ class TestDirectoryMerkelTree(unittest.TestCase):
     for deleted_dir in cls.deleted_dirs:
       if not os.path.isdir(os.path.join(cls.original_dir, deleted_dir)):
         os.mkdir(os.path.join(cls.original_dir, deleted_dir))
-    
+
     # Copy over the original contents.
     shutil.copytree(cls.original_dir, cls.modified_dir)
     # Update the specified files.
@@ -74,7 +75,7 @@ class TestDirectoryMerkelTree(unittest.TestCase):
         updated_dirs.add(os.path.dirname(new_file)+'/')
       with open(os.path.join(cls.modified_dir, new_file), 'w') as f:
         f.write(os.urandom(8)) # Fill each new file with 8 bytes of random data.
-    
+
     # Delete the specified files.
     for deleted_file in cls.deleted_files:
       os.remove(os.path.join(cls.modified_dir, deleted_file))
@@ -85,48 +86,48 @@ class TestDirectoryMerkelTree(unittest.TestCase):
       os.rmdir(os.path.join(cls.modified_dir, deleted_dir))
       if deleted_dir in updated_dirs:
         updated_dirs.remove(deleted_dir)
-      
+
     # Generate the Merkel trees.
     tree_original = DirectoryMerkelTree.make_dmt(cls.original_dir)
     tree_modified = DirectoryMerkelTree.make_dmt(cls.modified_dir)
 
-    
+
   @classmethod
   def tearDownClass(cls):
     os.chdir('..')
     shutil.rmtree(cls.test_dir)
-    
+
   def test_hash_determinism(self):
     """
-    Check that a directory produces the same hash when a Merkel tree is made 
+    Check that a directory produces the same hash when a Merkel tree is made
     from it twice in a row.
     """
     hash_original = tree_original.dmt_hash
     hash_original_regenerated = DirectoryMerkelTree.make_dmt(self.original_dir).dmt_hash
     self.assertEqual(hash_original, hash_original_regenerated)
-    
+
   def test_tree_equality(self):
     """Test the implementation of the equality checking for the `DirectoryMerkelTree` class."""
     self.assertEqual(tree_original, tree_original)
-    
+
   def test_tree_determinism(self):
     """Check that a directory produces the same Merkel tree twice in a row."""
     tree_original_regenerated = DirectoryMerkelTree.make_dmt(self.original_dir)
     self.assertEqual(tree_original, tree_original_regenerated)
-  
+
   def test_hash_inequality(self):
     hash_original = tree_original.dmt_hash
     hash_modified = tree_modified.dmt_hash
     self.assertNotEqual(hash_original, hash_modified)
-    
+
   def test_tree_inequality(self):
     self.assertNotEqual(tree_original, tree_modified)
-    
+
   def test_tree_difference_unmodified(self):
     updated, new, deleted = DirectoryMerkelTree.compute_tree_changes(tree_modified, tree_original)
     modified_items = updated.union(new).union(deleted)
     self.assertTrue(self.unmodified_files.isdisjoint(modified_items))
-    
+
   def test_tree_difference_updated(self):
     updated, _, _ = DirectoryMerkelTree.compute_tree_changes(tree_modified, tree_original)
     self.assertEqual(updated, self.updated_files.union(updated_dirs), 'Error in calculating updated items.')
@@ -138,6 +139,5 @@ class TestDirectoryMerkelTree(unittest.TestCase):
   def test_tree_difference_deleted(self):
     _, _, deleted = DirectoryMerkelTree.compute_tree_changes(tree_modified, tree_original)
     self.assertEqual(deleted, self.deleted_files.union(self.deleted_dirs), 'Error in calculating deleted items.')
-    
-    
-    
+
+
