@@ -3,7 +3,7 @@ Demo
 
 The demo screencast was made using StarCluster (v0.95.5) to simplify managing the necessary Amazon EC2 instances.
 
-To create a cluster for testing StrongBox, run the command
+To create a cluster for testing StrongBox, edit the `strongbox_starcluster_config` file, supplying your AWS keys, then run the command
 ```
 starcluster -c strongbox_starcluster_config start strongbox_cluster
 ```
