@@ -1,7 +1,7 @@
 # By Esmail Fadae.
 
 import os, hashlib, Crypto.Random, Crypto.PublicKey, Crypto.Cipher.AES, Crypto.Hash.SHA256, Crypto.Signature, cPickle, base64
-from PeerConfiguration import PeerConfiguration
+import PeerConfiguration
 from StrongBox import RevisionData, INVALID_REVISION
 
 # FIXME: This is a shitty, shitty name for this class.
@@ -81,7 +81,7 @@ class Encrypter():
     if store_id == self.store_id:
       store_key = self.public_key
     else:
-      store_key_file = PeerConfiguration.get_foreign_store_key_file(store_id, self.config_directory)
+      store_key_file = PeerConfiguration.PeerConfiguration.get_foreign_store_key_file(store_id, self.config_directory)
       with open(store_key_file, 'r') as f:
         store_key = Crypto.PublicKey.RSA.importKey(f.read())
     
@@ -94,7 +94,7 @@ class Encrypter():
     if peer_id == self.peer_id:
       public_key = self.public_key
     else:
-      peer_key_file = PeerConfiguration.get_foreign_peer_key_file(peer_id, self.config_directory)
+      peer_key_file = PeerConfiguration.PeerConfiguration.get_foreign_peer_key_file(peer_id, self.config_directory)
       with open(peer_key_file, 'r') as f:
         public_key = Crypto.PublicKey.RSA.importKey(f.read())
     return public_key  
@@ -102,7 +102,7 @@ class Encrypter():
   
   @staticmethod
   def load_private_key(config_directory):
-    private_key_file = PeerConfiguration.get_private_key_file(config_directory)
+    private_key_file = PeerConfiguration.PeerConfiguration.get_private_key_file(config_directory)
     
     # Load from a previously generated file.
     if os.path.isfile(private_key_file):

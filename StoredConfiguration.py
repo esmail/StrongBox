@@ -4,9 +4,9 @@ import os, shutil, cPickle, copy
 from collections import namedtuple
 
 from StrongBox import PeerData, StoreData, INVALID_REVISION
-from Encrypter import Encrypter
-from PeerConfiguration import PeerConfiguration
-from Communicator import Communicator
+import Encrypter
+import PeerConfiguration
+import Communicator
 import DirectoryMerkelTree
 
 class StoredConfiguration():
@@ -308,7 +308,7 @@ class StoredConfiguration():
     
     # Get and store the IP address
     # FIXME: Would like to sign this data (probably the whole `PeerData` object).
-    network_address = Communicator.get_public_network_address()
+    network_address = Communicator.Communicator.get_public_network_address()
     peer_data = PeerData(network_address, peer_dict[self.peer_id].store_revisions)
     peer_dict[self.peer_id] = peer_data
     
@@ -373,8 +373,8 @@ class StoredConfiguration():
     if store_id == self.store_id:
       root_directory = self.own_store_directory
     else:
-      peer_backups_directory = PeerConfiguration.compute_peer_backups_directory(self.config_directory)
-      store_dirname = Encrypter.compute_safe_filename(store_id)
+      peer_backups_directory = PeerConfiguration.PeerConfiguration.compute_peer_backups_directory(self.config_directory)
+      store_dirname = Encrypter.Encrypter.compute_safe_filename(store_id)
       root_directory = os.path.join(peer_backups_directory, store_dirname)
     
     item_absolute_path = os.path.join(root_directory, item_relative_path)

@@ -3,10 +3,10 @@
 import os, shutil
 from StrongBox import PeerData, StoreData
 import DirectoryMerkelTree
-from StoredConfiguration import StoredConfiguration
-from Encrypter import Encrypter
+import StoredConfiguration
+import Encrypter
 from Logger import NullLogger
-from Communicator import Communicator
+import Communicator
 
 class PeerConfiguration():
   """
@@ -43,7 +43,7 @@ class PeerConfiguration():
   
   @classmethod
   def get_foreign_peer_key_file(cls, peer_id, config_directory):
-    peer_filename = Encrypter.compute_safe_filename(peer_id)
+    peer_filename = Encrypter.Encrypter.compute_safe_filename(peer_id)
     key_path = os.path.join(cls.compute_peer_keys_directory(config_directory), peer_filename+'.pem')
     return key_path
   
@@ -53,13 +53,13 @@ class PeerConfiguration():
     Convenience function to compute the location of another (not our own) 
     store's recorded public key file.
     """
-    store_filename = Encrypter.compute_safe_filename(store_id)
+    store_filename = Encrypter.Encrypter.compute_safe_filename(store_id)
     key_path = os.path.join(cls.compute_store_keys_directory(config_directory), store_filename+'.pem')
     return key_path
   
   
   def compute_peer_backups_directory(self):
-    peer_backups_directory = os.path.join(self.root_directory, '.peer_backups')
+    peer_backups_directory = os.path.join(self.root_directory, '.store_backups')
     return peer_backups_directory
 
 
@@ -126,11 +126,11 @@ class PeerConfiguration():
     self.logger = logger
     
     if encryption_key is None:
-      encryption_key = Encrypter.generate_encryption_key()
+      encryption_key = Encrypter.Encrypter.generate_encryption_key()
       
     # Now that we have our encryption key, instantiate a new `Encrypter` with it or supply it to the one provided.
     if encrypter == None:
-      encrypter = Encrypter(self.logger, encryption_key, self.config_directory, peer_id, store_id)
+      encrypter = Encrypter.Encrypter(self.logger, encryption_key, self.config_directory, peer_id, store_id)
     else:
       encrypter.encryption_key = encryption_key
     self.encrypter = encrypter
@@ -158,7 +158,7 @@ class PeerConfiguration():
     own_store_revision_data = encrypter.get_signed_revision_data(revision_number, store_hash)
     
     # TODO: Should the network address be overrideable for testing purposes?
-    network_address = Communicator.get_public_network_address()
+    network_address = Communicator.Communicator.get_public_network_address()
     if peer_dict is None:
       peer_dict = {peer_id: PeerData(network_address, {store_id: own_store_revision_data})}
     
@@ -169,9 +169,9 @@ class PeerConfiguration():
     if stored_configuration is None:
       try:
         # FIXME: Will also want to set overridden attributes like `store_dict` given how this interface is shaping up (is that actually necessary)?
-        stored_configuration = StoredConfiguration.load_stored_configuration(self.logger, self.encrypter, self.config_directory)
+        stored_configuration = StoredConfiguration.StoredConfiguration.load_stored_configuration(self.logger, self.encrypter, self.config_directory)
       except EnvironmentError:
-        stored_configuration = StoredConfiguration(self.config_directory, logger, encrypter, configuration_file \
+        stored_configuration = StoredConfiguration.StoredConfiguration(self.config_directory, logger, encrypter, configuration_file \
                                , own_store_directory, peer_id, peer_dict, store_id \
                                , store_dict, encryption_key, merkel_tree)
     self.stored_configuration = stored_configuration

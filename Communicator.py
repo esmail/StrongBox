@@ -1,7 +1,7 @@
 # By Esmail Fadae.
 
 import os, subprocess, json, urllib2, httplib
-from PeerConfiguration import PeerConfiguration
+import PeerConfiguration
 
 class Communicator():
   
@@ -13,7 +13,7 @@ class Communicator():
       # Use OpenSSL's CLI to generate an X.509 from the existing RSA private key
       # Adapted from http://stackoverflow.com/a/12921889 and http://stackoverflow.com/a/12921889
       subprocess.check_call('openssl req -new -batch -x509 -nodes -days 3650 -key ' \
-                            + PeerConfiguration.get_private_key_file(config_directory) \
+                            + PeerConfiguration.PeerConfiguration.get_private_key_file(config_directory) \
                             + ' -out ' + x509_cert_path \
                             , shell=True)
   @staticmethod
