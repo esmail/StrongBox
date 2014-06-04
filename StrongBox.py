@@ -517,9 +517,9 @@ class Peer:
     if not os.path.exists(self.store_keys_directory):
       os.makedirs(self.store_keys_directory)
     
-    self.peer_backups_directory = os.path.join(self.root_directory, '.peer_backups')
-    if not os.path.exists(self.peer_backups_directory):
-      os.makedirs(self.peer_backups_directory)
+    self.store_backups_directory = os.path.join(self.root_directory, '.store_backups')
+    if not os.path.exists(self.store_backups_directory):
+      os.makedirs(self.store_backups_directory)
     
     
   def initialize_keys(self, private_key_contents):
@@ -656,7 +656,7 @@ class Peer:
       return self.own_store_directory
     
     store_filename = self.compute_safe_filename(store_id)
-    return os.path.join(self.peer_backups_directory, store_filename)
+    return os.path.join(self.store_backups_directory, store_filename)
     
     
   def compute_safe_filename(self, input_string):
@@ -2260,9 +2260,9 @@ def delete_old_configuration():
     print 'Old configuration directory found. Deleting.'
     shutil.rmtree(os.path.join(os.getcwd(),'.config'))
   
-  if os.path.isdir(os.path.join(os.getcwd(),'.peer_backups')):
-    print 'Old peer backups directory found. Deleting.'
-    shutil.rmtree(os.path.join(os.getcwd(),'.peer_backups'))
+  if os.path.isdir(os.path.join(os.getcwd(),'.store_backups')):
+    print 'Old store backups directory found. Deleting.'
+    shutil.rmtree(os.path.join(os.getcwd(),'.store_backups'))
 
 
 def import_duplication_configuration():
