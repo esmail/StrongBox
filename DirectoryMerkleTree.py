@@ -12,7 +12,7 @@ empty_directory_hash = sha256('empty directory').digest()
 
 def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
   """
-  Generate a Merkel tree object for the directory provided. The resulting Merkel 
+  Generate a Merkle tree object for the directory provided. The resulting Merkle 
   tree captures the state of the directory in the form of hierarchically 
   generated hashes of the directories contents. A nonce can optionally be provided 
   to facilitate remote verification of directory contents.
@@ -28,7 +28,7 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
     if nonce:
       empty_directory_cipher.update(nonce)
       
-    return DirectoryMerkelTree(dmt_hash=empty_directory_cipher.digest(), children=None)
+    return DirectoryMerkleTree(dmt_hash=empty_directory_cipher.digest(), children=None)
     
   children = dict()
   
@@ -51,7 +51,7 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
       if nonce:
         file_hash.update(nonce)
         
-      dmt_child = DirectoryMerkelTree(dmt_hash=file_hash.digest(), children=None)
+      dmt_child = DirectoryMerkleTree(dmt_hash=file_hash.digest(), children=None)
       children[filename] = dmt_child
       
     elif isdir(item_path):
@@ -77,7 +77,7 @@ def make_dmt(root_directory=os.getcwd(), nonce='', encrypter=None):
   for child in children.values():
     tree_hash.update(child.dmt_hash)
     
-  dmt_tree = DirectoryMerkelTree(dmt_hash=tree_hash.digest(), children=children)
+  dmt_tree = DirectoryMerkleTree(dmt_hash=tree_hash.digest(), children=children)
   return dmt_tree
 
 # FIXME: Allow this to optionally accumulate output in a string.
@@ -103,7 +103,7 @@ def print_tree(tree):
 
 def compute_tree_changes(dmt_new, dmt_old, directory_path=''):
   """
-  Compare the Merkel trees for two directories and return lists of the items 
+  Compare the Merkle trees for two directories and return lists of the items 
   added, updated, and delted.
   """
   updated, new, deleted = set(), set(), set()
@@ -167,7 +167,7 @@ def compute_tree_changes(dmt_new, dmt_old, directory_path=''):
 
 def get_all_paths(dmt, directory_path=''):
   """
-  Return the relative paths to all of the contents of a directory Merkel tree.
+  Return the relative paths to all of the contents of a directory Merkle tree.
   """
   # Base case.
   if not dmt.children:
@@ -187,9 +187,9 @@ def get_all_paths(dmt, directory_path=''):
   return filesystem_items
   
 
-class DirectoryMerkelTree:
+class DirectoryMerkleTree:
   """
-  A simple tree implementation designed to contain Merkel tree information about 
+  A simple tree implementation designed to contain Merkle tree information about 
   a directory or file.
   """
   def __init__(self, dmt_hash, children):

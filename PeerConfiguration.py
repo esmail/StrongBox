@@ -2,7 +2,7 @@
 
 import os, shutil
 from StrongBox import PeerData, StoreData
-import DirectoryMerkelTree
+import DirectoryMerkleTree
 import StoredConfiguration
 import Encrypter
 from Logger import NullLogger
@@ -107,7 +107,7 @@ class PeerConfiguration():
                store_id = None,
                store_dict = None,
                encryption_key = None, # TODO: Make this an RSA-encrypted file in the store to facilitate updating
-               merkel_tree = None
+               merkle_tree = None
                ):
     
     # Set defaults and overrides.
@@ -149,12 +149,12 @@ class PeerConfiguration():
       store_id = encrypter.store_id
     self.store_id = store_id
     
-    if merkel_tree is None:
-      merkel_tree = DirectoryMerkelTree.make_dmt(own_store_directory, encrypter=encrypter)
+    if merkle_tree is None:
+      merkle_tree = DirectoryMerkleTree.make_dmt(own_store_directory, encrypter=encrypter)
 
     # Prepare and sign the initial revision data.
     revision_number = 1
-    store_hash = merkel_tree.dmt_hash
+    store_hash = merkle_tree.dmt_hash
     own_store_revision_data = encrypter.get_signed_revision_data(revision_number, store_hash)
     
     # TODO: Should the network address be overrideable for testing purposes?
@@ -173,7 +173,7 @@ class PeerConfiguration():
       except EnvironmentError:
         stored_configuration = StoredConfiguration.StoredConfiguration(self.config_directory, logger, encrypter, configuration_file \
                                , own_store_directory, peer_id, peer_dict, store_id \
-                               , store_dict, encryption_key, merkel_tree)
+                               , store_dict, encryption_key, merkle_tree)
     self.stored_configuration = stored_configuration
 
     # Finally, save the configuration to storage ensuring a backup copy also exists.

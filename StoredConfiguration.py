@@ -7,7 +7,7 @@ from StrongBox import PeerData, StoreData, INVALID_REVISION
 import Encrypter
 import PeerConfiguration
 import Communicator
-import DirectoryMerkelTree
+import DirectoryMerkleTree
 
 class StoredConfiguration():
   """
@@ -30,7 +30,7 @@ class StoredConfiguration():
                store_id = None,
                store_dict = None,
                encryption_key = None, # TODO: Make this an RSA-encrypted file in the store to facilitate updating
-               merkel_tree = None
+               merkle_tree = None
                ):
     """
     A simplistic constructor that just sets the defaults and/or overridden attribute values.
@@ -45,7 +45,7 @@ class StoredConfiguration():
     self.store_id = store_id
     self.store_dict = store_dict
     self.encryption_key = encryption_key
-    self.merkel_tree = merkel_tree
+    self.merkle_tree = merkle_tree
 
   
   @staticmethod
@@ -89,7 +89,7 @@ class StoredConfiguration():
 
   class StoredConfiguration_NamedTuple(
       namedtuple('_StoredConfiguration_NamedTuple' \
-                 , 'own_store_directory, peer_id, peer_dict, store_id, store_dict, encryption_key, merkel_tree')):
+                 , 'own_store_directory, peer_id, peer_dict, store_id, store_dict, encryption_key, merkle_tree')):
     """
     A class wrapper for `_StoredConfiguration_NamedTuple`. A `_StoredConfiguration_NamedTuple`
     contains only the configuration data from a `StoredConfiguration` object that 
@@ -103,11 +103,11 @@ class StoredConfiguration():
 
   @staticmethod
   def from_tuple(config_directory, logger, encrypter, stored_configuration_tuple):
-    own_store_directory, peer_id, peer_dict, store_id, store_dict, encryption_key, merkel_tree \
+    own_store_directory, peer_id, peer_dict, store_id, store_dict, encryption_key, merkle_tree \
         = stored_configuration_tuple
     stored_configuration = \
         StoredConfiguration(config_directory, logger, encrypter, own_store_directory, peer_id \
-                            , peer_dict, store_id, store_dict, encryption_key, merkel_tree)
+                            , peer_dict, store_id, store_dict, encryption_key, merkle_tree)
     return stored_configuration
   
   def to_tuple(self):
@@ -115,7 +115,7 @@ class StoredConfiguration():
         self.StoredConfiguration_NamedTuple(self.config_directory, self.logger, self.encrypter \
                                        , self.own_store_directory, self.peer_id \
                                        , self.peer_dict, self.store_id, self.store_dict \
-                                       , self.encryption_key, self.merkel_tree)
+                                       , self.encryption_key, self.merkle_tree)
     return stored_configuration_tuple
 
 
@@ -170,17 +170,17 @@ class StoredConfiguration():
       print_tuples.append( (4, '!!!! SOOOoo INSECURE !!!!') )
       print_tuples.append( (4, 'encryption_key = {}'.format([self.encryption_key])) )
       
-    # Outputting Merkel trees (currently) requires some special considerations.
-    merkel_tree_changed = False
-    if (other.merkel_tree != None) and (other.merkel_tree != self.merkel_tree):
-      self.merkel_tree = other.merkel_tree
-      merkel_tree_changed = True
-      print_tuples.append( (2, '`merkel_tree` updated') )
-      print_tuples.append( (4, 'merkel_tree:') )
+    # Outputting Merkle trees (currently) requires some special considerations.
+    merkle_tree_changed = False
+    if (other.merkle_tree != None) and (other.merkle_tree != self.merkle_tree):
+      self.merkle_tree = other.merkle_tree
+      merkle_tree_changed = True
+      print_tuples.append( (2, '`merkle_tree` updated') )
+      print_tuples.append( (4, 'merkle_tree:') )
         
     self.logger.debug_print( print_tuples )
-    if merkel_tree_changed and (self.logger.verbosity >= 4):
-          DirectoryMerkelTree.print_tree(self.merkel_tree)
+    if merkle_tree_changed and (self.logger.verbosity >= 4):
+          DirectoryMerkleTree.print_tree(self.merkle_tree)
 
     if save_to_file:
       # Copy the existing configuration file in place of the old backup.
@@ -228,7 +228,7 @@ class StoredConfiguration():
     
     # Enact the update.
     peer_dict_copy[peer_id] = PeerData(network_address, peer_mutual_store_revisions)
-    metadata = (self.peer_id, peer_dict_copy, self.store_id, store_dict_copy, self.encryption_key, self.aes_iv, self.merkel_tree)
+    metadata = (self.peer_id, peer_dict_copy, self.store_id, store_dict_copy, self.encryption_key, self.aes_iv, self.merkle_tree)
     self.update_metadata(metadata, True)
 
   def get_revision_data(self, peer_id, store_id):
@@ -364,7 +364,7 @@ class StoredConfiguration():
     self.record_peer_data(self.peer_id, updated_peer_data)
     
     # Enact the change
-    metadata = (self.peer_id, self.peer_dict, self.store_id, store_dict_copy, self.encryption_key, self.aes_iv, self.merkel_tree)
+    metadata = (self.peer_id, self.peer_dict, self.store_id, store_dict_copy, self.encryption_key, self.aes_iv, self.merkle_tree)
     self.update_metadata(metadata, True)
     
     
@@ -392,7 +392,7 @@ class StoredConfiguration():
       is_directory = False
       
     if store_id == self.store_id:
-      # Undo the item_absolute_path encryption done while creating our Merkel tree.
+      # Undo the item_absolute_path encryption done while creating our Merkle tree.
       output_tuples = [ (2, 'item_relative_path (encrypted) = {}'.format(item_relative_path)) ]
       item_relative_path = self.encrypter.decrypt_own_store_path(item_relative_path)
       output_tuples.append( (2, 'item_relative_path (decrypted) = {}'.format(item_relative_path)) )
@@ -429,7 +429,7 @@ class StoredConfiguration():
     a backup of another user's store).
     """
     if store_id == self.store_id:
-      # Undo the item_absolute_path encryption done while creating our Merkel tree.
+      # Undo the item_absolute_path encryption done while creating our Merkle tree.
       item_relative_path = self.decrypt_own_store_path(item_relative_path)
       self.debug_print( [(2, 'item_relative_path (decrypted) = {}'.format(item_relative_path))] )
       
@@ -456,7 +456,7 @@ class StoredConfiguration():
       return None
     
     if store_id == self.store_id:
-      # Undo the item_absolute_path encryption done while creating our Merkel tree.
+      # Undo the item_absolute_path encryption done while creating our Merkle tree.
       item_relative_path = self.encrypter.decrypt_own_store_path(item_relative_path)
     
     item_absolute_path = self._compute_store_item_path(store_id, item_relative_path)

@@ -24,7 +24,7 @@ import traceback
 import time
 import Crypto.Signature.PKCS1_v1_5, Crypto.Hash, Crypto.Cipher.AES, Crypto.PublicKey.RSA, Crypto.Random
 import base64
-import DirectoryMerkelTree
+import DirectoryMerkleTree
 import subprocess
 import argparse
 
@@ -34,7 +34,7 @@ import argparse
 PeerData = namedtuple('PeerData', 'network_address, store_revisions')
 StoreData = namedtuple('StoreData', 'revision_data, peers')
 RevisionData = namedtuple('RevisionData', 'revision_number, store_hash, signature')
-Metadata = namedtuple('Metadata', 'peer_id, peer_dict, store_id, store_dict, encryption_key, aes_iv, merkel_tree')
+Metadata = namedtuple('Metadata', 'peer_id, peer_dict, store_id, store_dict, encryption_key, aes_iv, merkle_tree')
 
 
 # Necessary constants for messaging
@@ -438,10 +438,10 @@ class Peer:
     peer_id = self.generate_peer_id()
     store_id = self.compute_store_id()
     network_address = self.get_public_network_address( )
-    merkel_tree = DirectoryMerkelTree.make_dmt(self.own_store_directory, encrypter=self)
+    merkle_tree = DirectoryMerkleTree.make_dmt(self.own_store_directory, encrypter=self)
     # Prepare and sign the initial revision data.
     revision_number = 1
-    store_hash = merkel_tree.dmt_hash
+    store_hash = merkle_tree.dmt_hash
     pickled_payload = cPickle.dumps( (revision_number, store_hash) )
     signature = self.sign(pickled_payload)
     own_revision_data = RevisionData(revision_number=revision_number, store_hash=store_hash, signature=signature)
@@ -456,7 +456,7 @@ class Peer:
     store_dict = {store_id: StoreData(own_revision_data, initial_peers)}
     
     # Load the initial values into a `Metadata` object.
-    metadata = Metadata(peer_id, peer_dict, store_id, store_dict, aes_key, aes_iv, merkel_tree)
+    metadata = Metadata(peer_id, peer_dict, store_id, store_dict, aes_key, aes_iv, merkle_tree)
     return metadata
     
   
@@ -704,11 +704,11 @@ class Peer:
   
   
   @property
-  def merkel_tree(self):
+  def merkle_tree(self):
     """
-    A `DirectoryMerkelTree` object containing the current state of the user's store.
+    A `DirectoryMerkleTree` object containing the current state of the user's store.
     """
-    return self.metadata.merkel_tree
+    return self.metadata.merkle_tree
   
   
   @property
@@ -786,13 +786,13 @@ class Peer:
       print_tuples.append( (2, '`aes_iv` updated') )
       print_tuples.append(  (4, '!!!! SOOOoo INSECURE !!!!') )
       print_tuples.append( (4, 'aes_iv = {}'.format([metadata.aes_iv])) )
-    if metadata.merkel_tree != self.merkel_tree:
-      print_tuples.append( (2, '`merkel_tree` updated') )
-      print_tuples.append( (4, 'merkel_tree:') )
+    if metadata.merkle_tree != self.merkle_tree:
+      print_tuples.append( (2, '`merkle_tree` updated') )
+      print_tuples.append( (4, 'merkle_tree:') )
       
     self.debug_print( print_tuples )
-    if (metadata.merkel_tree != self.merkel_tree) and (self.debug_verbosity >= 4):
-        DirectoryMerkelTree.print_tree(self.merkel_tree)
+    if (metadata.merkle_tree != self.merkle_tree) and (self.debug_verbosity >= 4):
+        DirectoryMerkleTree.print_tree(self.merkle_tree)
     
     # Copy the previous metadata file to the backup location.
     shutil.copyfile(self.metadata_file, self.backup_metadata_file)
@@ -851,7 +851,7 @@ class Peer:
     
     # Enact the update.
     peer_dict[peer_id] = PeerData(network_address, store_revisions)
-    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkle_tree)
     self.update_metadata(metadata, True)
 
   
@@ -924,7 +924,7 @@ class Peer:
     peer_dict[self.peer_id] = peer_data
     
     # Enact the change.
-    metadata = Metadata(self.peer_id, peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, self.merkle_tree)
     self.update_metadata(metadata, True)
     
     
@@ -975,18 +975,18 @@ class Peer:
     self.record_peer_data(self.peer_id, peer_data)
     
     # Enact the change
-    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkle_tree)
     self.update_metadata(metadata, True)
     
     
   def check_store(self):
     """
     Check this peer's own store for changes generating new revision data and a 
-    new Merkel tree upon updates.
+    new Merkle tree upon updates.
     """
-    # Compute new Merkel tree from scratch.
-    new_merkel_tree = DirectoryMerkelTree.make_dmt(self.own_store_directory, encrypter=self)
-    if (self.merkel_tree) and (self.merkel_tree == new_merkel_tree):
+    # Compute new Merkle tree from scratch.
+    new_merkle_tree = DirectoryMerkleTree.make_dmt(self.own_store_directory, encrypter=self)
+    if (self.merkle_tree) and (self.merkle_tree == new_merkle_tree):
       return
     
     old_revision_data = self.get_revision_data(self.peer_id, self.store_id)
@@ -997,7 +997,7 @@ class Peer:
       revision_number = old_revision_data.revision_number + 1
         
     # Our store has changed so get, sign, and record the new revision data.
-    store_hash = new_merkel_tree.dmt_hash
+    store_hash = new_merkle_tree.dmt_hash
     pickled_payload = cPickle.dumps( (revision_number, store_hash) )
     signature = self.sign(pickled_payload)
     
@@ -1005,8 +1005,8 @@ class Peer:
     revision_data = RevisionData(revision_number=revision_number, store_hash=store_hash, signature=signature)
     self.update_own_store_revision(self.store_id, revision_data)
     
-    # Also store the new Merkel tree.
-    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, new_merkel_tree)
+    # Also store the new Merkle tree.
+    metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, new_merkle_tree)
     self.update_metadata(metadata)
     
     self.debug_print( (1, 'Change detected in own store. New signed revision number: {}'.format(revision_number)) )
@@ -1023,7 +1023,7 @@ class Peer:
       isdir = False
       
     if store_id == self.store_id:
-      # Undo the path encryption done while creating our Merkel tree.
+      # Undo the path encryption done while creating our Merkle tree.
       relative_path = self.decrypt_own_store_path(relative_path)
       self.debug_print( [(2, 'relative_path (decrypted) = {}'.format(relative_path))] )
       # If a file, decrypt the contents
@@ -1061,7 +1061,7 @@ class Peer:
     a backup of another user's store).
     """
     if store_id == self.store_id:
-      # Undo the path encryption done while creating our Merkel tree.
+      # Undo the path encryption done while creating our Merkle tree.
       item_relative_path = self.decrypt_own_store_path(item_relative_path)
       self.debug_print( [(2, 'item_relative_path (decrypted) = {}'.format(item_relative_path))] )
       
@@ -1104,7 +1104,7 @@ class Peer:
     if item_relative_path[-1] == '/':
       return None
     if store_id == self.store_id:
-      # Undo the path encryption done while creating our Merkel tree.
+      # Undo the path encryption done while creating our Merkle tree.
       item_relative_path = self.decrypt_own_store_path(item_relative_path)
     
     path = os.path.join(self._get_store_path(store_id), item_relative_path)
@@ -1197,41 +1197,41 @@ class Peer:
     return signed_revision_data
   
   
-  def get_merkel_tree(self, store_id, nonce=None, fresh=False):
-    """Get the locally computed Merkel tree for a store."""
+  def get_merkle_tree(self, store_id, nonce=None, fresh=False):
+    """Get the locally computed Merkle tree for a store."""
     # Pre-existing tree for own store without nonce
     if (store_id == self.store_id) and (not nonce) and (not fresh):
-      return self.merkel_tree
+      return self.merkle_tree
     
     elif store_id == self.store_id:
-      # Compute a new encrypted, nonced Merkel tree of our own store.
-      merkel_tree = DirectoryMerkelTree.make_dmt(self._get_store_path(store_id), nonce=nonce, encrypter=self)
+      # Compute a new encrypted, nonced Merkle tree of our own store.
+      merkle_tree = DirectoryMerkleTree.make_dmt(self._get_store_path(store_id), nonce=nonce, encrypter=self)
     else:
-      # Make the Merkel tree.
-      merkel_tree = DirectoryMerkelTree.make_dmt(self._get_store_path(store_id), nonce=nonce)
+      # Make the Merkle tree.
+      merkle_tree = DirectoryMerkleTree.make_dmt(self._get_store_path(store_id), nonce=nonce)
     
-    return merkel_tree
+    return merkle_tree
     
 
-  def diff_store_to_merkel_tree(self, store_id, mt_old):
+  def diff_store_to_merkle_tree(self, store_id, mt_old):
     """
     Compute the difference between the current contents of the specified store 
-    and those indicated by the older, provided Merkel tree.
+    and those indicated by the older, provided Merkle tree.
     """
-    mt_new = self.get_merkel_tree(store_id)
+    mt_new = self.get_merkle_tree(store_id)
     
-    updated, new, deleted = DirectoryMerkelTree.compute_tree_changes(mt_new, mt_old)
+    updated, new, deleted = DirectoryMerkleTree.compute_tree_changes(mt_new, mt_old)
     
     return updated.union(new), deleted
 
 
-  # TODO: Throws away the expensively computed Merkel tree, remove.
+  # TODO: Throws away the expensively computed Merkle tree, remove.
   def get_store_hash(self, store_id, nonce='', fresh=False):
     """
     Retrieve the overall hash value for the user's store utilizing a nonce as needed.
     """
-    merkel_tree = self.get_merkel_tree(store_id, nonce, fresh)
-    return merkel_tree.dmt_hash
+    merkle_tree = self.get_merkle_tree(store_id, nonce, fresh)
+    return merkle_tree.dmt_hash
 
 
   def verify_sync(self, peer_id, store_id):
@@ -1491,13 +1491,13 @@ class Peer:
 
   def sync_receive(self, skt, sender_peer_id, sync_store_id):
     """Conduct a sync as the receiving party."""
-    # Submit our Merkel tree for the store so the sync sender can identify which files require modification.
-    merkel_tree = self.get_merkel_tree(sync_store_id)
-    self.debug_print( [(1, 'Sending Merkel tree to sync sender.'),
-                       (4, 'merkel_tree :')] )
+    # Submit our Merkle tree for the store so the sync sender can identify which files require modification.
+    merkle_tree = self.get_merkle_tree(sync_store_id)
+    self.debug_print( [(1, 'Sending Merkle tree to sync sender.'),
+                       (4, 'merkle_tree :')] )
     if self.debug_verbosity >= 4:
-      DirectoryMerkelTree.print_tree(merkel_tree)
-    self.send_merkel_tree_msg(skt, sync_store_id, merkel_tree)   
+      DirectoryMerkleTree.print_tree(merkle_tree)
+    self.send_merkle_tree_msg(skt, sync_store_id, merkle_tree)   
     
     # Get and process all commands to update/create and delete files before proceeding to verification.
     self.debug_print( (1, 'Processing update and delete commands from sync sender as they arrive.') )
@@ -1542,16 +1542,16 @@ class Peer:
     
   def sync_send(self, skt, receiver_peer_id, sync_store_id):
     """Conduct a sync as the sending party."""
-    # Receive the sync receiver's Merkel tree for the store.
-    self.debug_print( (2, 'Waiting for Merkel tree from sync receiver.') )
-    pickled_payload = self.receive_expected_message(skt, 'merkel_tree_msg')
-    merkel_tree = self.unpickle('merkel_tree_msg', pickled_payload)
-    self.debug_print( [(1, 'Received merkel tree to sync receiver.'),
-                       (4, 'merkel_tree :')] )
+    # Receive the sync receiver's Merkle tree for the store.
+    self.debug_print( (2, 'Waiting for Merkle tree from sync receiver.') )
+    pickled_payload = self.receive_expected_message(skt, 'merkle_tree_msg')
+    merkle_tree = self.unpickle('merkle_tree_msg', pickled_payload)
+    self.debug_print( [(1, 'Received Merkle tree to sync receiver.'),
+                       (4, 'merkle_tree :')] )
     if self.debug_verbosity >= 4:
-      DirectoryMerkelTree.print_tree(merkel_tree)
+      DirectoryMerkleTree.print_tree(merkle_tree)
     
-    updated_files, deleted_files = self.diff_store_to_merkel_tree(sync_store_id, merkel_tree)
+    updated_files, deleted_files = self.diff_store_to_merkle_tree(sync_store_id, merkle_tree)
     self.debug_print( [(2, 'updated_files = {}'.format(updated_files)),
                        (2, 'deleted_files = {}'.format(deleted_files))])
     
@@ -1681,12 +1681,12 @@ class Peer:
     message_data = store_id
     self.send(skt, message_id, message_data)
     
-  def send_merkel_tree_msg(self, skt, store_id, merkel_tree):
+  def send_merkle_tree_msg(self, skt, store_id, merkle_tree):
     """
     Simple message transmission wrapper.
     """
-    message_id = message_ids['merkel_tree_msg']
-    message_data = merkel_tree
+    message_id = message_ids['merkle_tree_msg']
+    message_data = merkle_tree
     self.send(skt, message_id, message_data)
     
   def send_update_file_msg(self, skt, relative_path, file_contents):
@@ -1861,18 +1861,18 @@ class Peer:
     
     return store_id
 
-  def unpickle_merkel_tree_msg(self, pickled_payload):
+  def unpickle_merkle_tree_msg(self, pickled_payload):
     """
     A simple wrapper for unpickling.
     """
-    merkel_tree = cPickle.loads(pickled_payload)
-    self.debug_print( [(3, 'Unpickled a \'merkel_tree_msg\' message.'),
-                       (4, 'merkel_tree:')] )
+    merkle_tree = cPickle.loads(pickled_payload)
+    self.debug_print( [(3, 'Unpickled a \'merkle_tree_msg\' message.'),
+                       (4, 'merkle_tree:')] )
      
     if self.debug_verbosity >= 4:
-      DirectoryMerkelTree.print_tree(merkel_tree)
+      DirectoryMerkleTree.print_tree(merkle_tree)
     
-    return merkel_tree
+    return merkle_tree
   
   def unpickle_update_file_msg(self, pickled_payload):
     """
@@ -2050,7 +2050,7 @@ class Peer:
       peer_dict[self.peer_id] = peer_data
     
     # Enact the changes.
-    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkel_tree)
+    metadata = Metadata(self.peer_id, peer_dict, self.store_id, store_dict, self.encryption_key, self.aes_iv, self.merkle_tree)
     self.update_metadata(metadata)
     
     
@@ -2066,7 +2066,7 @@ class Peer:
     1: Interesting info for demoing.
     2: Additionally print uglies such as hashes and ID strings that are of nearly-intelligible length.
     3: Additionally print noisy stuff like message receipts and larger data like peer and store dictionaries.
-    4: "Oh shit, I have no idea where this bug is." (Addtionally call stack and Merkel trees.)
+    4: "Oh shit, I have no idea where this bug is." (Addtionally call stack and Merkle trees.)
     5: Additionally print file contents.
     """
     # Handle the single tuple case.
@@ -2178,7 +2178,7 @@ class Peer:
     
 
 def test_ssl():
-  print 'Executing peer connection test_DirectoryMerkelTree.'
+  print 'Executing peer connection test.'
   client = Peer(debug_verbosity=1, debug_preamble='Peer Client:')
   server = Peer(debug_verbosity=1, debug_preamble='Peer Server:')
   
@@ -2191,7 +2191,7 @@ def test_ssl():
 
 
 def test_handshake():
-  print 'Executing peer handshake test_DirectoryMerkelTree.'
+  print 'Executing peer handshake test.'
   client = Peer(debug_verbosity=5, debug_preamble='Peer Client:')
   server = Peer(debug_verbosity=5, debug_preamble='Peer Server:')
   
@@ -2287,7 +2287,7 @@ def import_owner_configuration():
 
 message_ids = {'handshake_msg'     : 0,
                'sync_req'          : 1,
-               'merkel_tree_msg'   : 2, 
+               'merkle_tree_msg'   : 2, 
                'update_file_msg'   : 3,
                'delete_file_msg'   : 4,
                'sync_complete_msg' : 5,
@@ -2300,7 +2300,7 @@ message_ids = {'handshake_msg'     : 0,
 # The weird shit.
 unpicklers = {'handshake_msg'     : Peer.unpickle_handshake_msg,
               'sync_req'          : Peer.unpickle_sync_req,
-              'merkel_tree_msg'   : Peer.unpickle_merkel_tree_msg,
+              'merkle_tree_msg'   : Peer.unpickle_merkle_tree_msg,
               'update_file_msg'   : Peer.unpickle_update_file_msg,
               'delete_file_msg'   : Peer.unpickle_delete_file_msg,
               'sync_complete_msg' : Peer.unpickle_sync_complete_msg,
