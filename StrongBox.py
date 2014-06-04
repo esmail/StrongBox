@@ -1972,15 +1972,15 @@ class Peer:
     self.manually_associate(peer_id, network_address, self.get_peer_key_path(peer_id))
 
 
-  def export_duplication_configuration(self):
+  def export_owner_configuration(self):
     """
     Export the (private) configuration data needed to access your store from another machine.
     """
     # Ensure we have a valid address to export
     self.update_network_address()
-    with open('strongbox_duplication_config.pickle', 'w') as f:
+    with open('strongbox_owner_config.pickle', 'w') as f:
       cPickle.dump( (self.peer_id, self.store_id, self.network_address, self.public_key.exportKey(), self.private_key.exportKey(), self.encryption_key) , f)
-    self.debug_print( [(0, 'Duplication configuration data written to file \'./strongbox_duplication_config.pickle\'.'),
+    self.debug_print( [(0, 'Owner configuration data written to file \'./strongbox_owner_config.pickle\'.'),
                        (0, 'WARNING: This file contains the secret encryption keys used to identify you as the owner of your store, and decrypt your private data. Keep it secure.')] )
   
   
@@ -2265,17 +2265,18 @@ def delete_old_configuration():
     shutil.rmtree(os.path.join(os.getcwd(),'.store_backups'))
 
 
-def import_duplication_configuration():
+def import_owner_configuration():
   """
-  Export the (private) configuration data needed to access your store from another machine.
+  Export the (private) configuration file used to allow the owner to access 
+  their store from another machine.
   """
   delete_old_configuration()
   
-  if not os.path.isfile('strongbox_duplication_config.pickle'):
-    print 'ERROR: File \'./strongbox_duplication_config.pickle\' not found.'
+  if not os.path.isfile('strongbox_owner_config.pickle'):
+    print 'ERROR: File \'./strongbox_owner_config.pickle\' not found.'
     raise IOError()
   
-  with open('strongbox_duplication_config.pickle', 'r') as f:
+  with open('strongbox_owner_config.pickle', 'r') as f:
     peer_id, _, network_address, public_key_contents, private_key_contents, aes_key = cPickle.load(f)
   
   peer = Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity \
@@ -2322,8 +2323,8 @@ if __name__ == '__main__':
   group.add_argument('-s', '--peer-server', action='store_true', help='Run in peer server mode only.')
   group.add_argument('--export-backup', action='store_true', help='Export the (public) configuration data another peer would need to act as a backup for your store.')
   group.add_argument('--import-backup', action='store_true', help='Import the (public) configuration data needed to act as a backup for another peer\'s store.')
-  group.add_argument('--export-duplication', action='store_true', help='Export the (private) configuration data needed to access your store from another machine.')
-  group.add_argument('--import-duplication', action='store_true', help='Generate new initial configuration data for this peer, importing the (private) configuration needed to access your store from another machine here.')
+  group.add_argument('--export-owner', action='store_true', help='Export the (private) configuration data needed to access your store from another machine.')
+  group.add_argument('--import-owner', action='store_true', help='Generate new initial configuration data for this peer, importing the (private) configuration needed to access your store from another machine here.')
 
   parser.add_argument('-d', '--debug-verbosity', default=0, type=int, help='Specify the verbosity of debugging messages.')
   # TODO: Optionally directing or "teeing" debug info to a log file would be nice, quite nice indeed.
@@ -2341,9 +2342,9 @@ if __name__ == '__main__':
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_backup_configuration()
   elif args.import_backup:
     Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_backup_configuration()
-  elif args.export_duplication:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_duplication_configuration()
-  elif args.import_duplication:
-    import_duplication_configuration()
+  elif args.export_owner:
+    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_owner_configuration()
+  elif args.import_owner:
+    import_owner_configuration()
   else:
     main(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
