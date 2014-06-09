@@ -28,6 +28,13 @@ import DirectoryMerkleTree
 import subprocess
 import argparse
 
+CONFIG_DIR = '.config'
+KEY_SUBDIR = 'keys'
+OWN_KEYS_SUBDIR = 'own'
+PEER_KEYS_SUBDIR = 'peer'
+STORE_KEYS_SUBDIR = 'store'
+REMOTE_STORE_BACKUPS_DIR = '.remote_store_backups'
+
 
 # Named tuples have (immutable) class-like semantics for accessing fields, but are straightforward to pickle/unpickle.
 # The following types are for important data whose contents and format should be relatively stable at this point.
@@ -79,7 +86,7 @@ class Peer:
     if own_store_directory:
       self.own_store_directory = own_store_directory
     else:
-      self.own_store_directory = os.path.join(os.getcwd(), 'own_store')
+      self.own_store_directory = os.path.join(os.getcwd(), 'store')
     if debug_verbosity:
       self.debug_verbosity = debug_verbosity
     else:
@@ -501,32 +508,32 @@ class Peer:
     if not os.path.exists(self.own_store_directory):
       os.makedirs(self.own_store_directory)
     
-    self.config_directory = os.path.join(self.root_directory, '.config')
+    self.config_dir = os.path.join(self.root_directory, CONFIG_DIR)
     
-    self.key_directory = os.path.join(self.config_directory, 'keys')
+    self.key_dir = os.path.join(self.config_dir, KEY_SUBDIR)
     
-    self.own_keys_directory = os.path.join(self.key_directory, 'own_keys')
-    if not os.path.exists(self.own_keys_directory):
-      os.makedirs(self.own_keys_directory)
+    self.own_keys_dir = os.path.join(self.key_dir, OWN_KEYS_SUBDIR)
+    if not os.path.exists(self.own_keys_dir):
+      os.makedirs(self.own_keys_dir)
     
-    self.peer_keys_directory = os.path.join(self.key_directory, 'peer_keys')
-    if not os.path.exists(self.peer_keys_directory):
-      os.makedirs(self.peer_keys_directory)
+    self.peer_keys_dir = os.path.join(self.key_dir, PEER_KEYS_SUBDIR)
+    if not os.path.exists(self.peer_keys_dir):
+      os.makedirs(self.peer_keys_dir)
       
-    self.store_keys_directory = os.path.join(self.key_directory, 'store_keys')
-    if not os.path.exists(self.store_keys_directory):
-      os.makedirs(self.store_keys_directory)
+    self.store_keys_dir = os.path.join(self.key_dir, STORE_KEYS_SUBDIR)
+    if not os.path.exists(self.store_keys_dir):
+      os.makedirs(self.store_keys_dir)
     
-    self.store_backups_directory = os.path.join(self.root_directory, '.store_backups')
-    if not os.path.exists(self.store_backups_directory):
-      os.makedirs(self.store_backups_directory)
+    self.remote_store_backups_dir = os.path.join(self.root_directory, REMOTE_STORE_BACKUPS_DIR)
+    if not os.path.exists(self.remote_store_backups_dir):
+      os.makedirs(self.remote_store_backups_dir)
     
     
   def initialize_keys(self, private_key_contents):
     """
     Import, load, or generate the private and public keys for the user and their store.
     """
-    self.private_key_file = os.path.join(self.own_keys_directory, 'private_key.pem')
+    self.private_key_file = os.path.join(self.own_keys_dir, 'private_key.pem')
     if private_key_contents:
       with open(self.private_key_file, 'w') as f:
         f.write(private_key_contents)
@@ -540,7 +547,7 @@ class Peer:
         f.write(self.private_key.exportKey())
     
     # TODO: Don't believe we ever actually use the public key file.
-    self.public_key_file = os.path.join(self.own_keys_directory, 'public_key.pem')
+    self.public_key_file = os.path.join(self.own_keys_dir, 'public_key.pem')
     if os.path.isfile(self.public_key_file):
       with open(self.public_key_file, 'r') as f:
         self.public_key = Crypto.PublicKey.RSA.importKey(f.read())
@@ -549,7 +556,7 @@ class Peer:
       with open(self.public_key_file, 'w') as f:
         f.write(self.public_key.exportKey())
       
-    self.x509_cert_file = os.path.join(self.own_keys_directory, 'x509.pem')
+    self.x509_cert_file = os.path.join(self.own_keys_dir, 'x509.pem')
     if not os.path.isfile(self.x509_cert_file):
       # Use OpenSSL's CLI to generate an X.509 from the existing RSA private key
       # Adapted from http://stackoverflow.com/a/12921889 and http://stackoverflow.com/a/12921889
@@ -567,7 +574,7 @@ class Peer:
     # Create a null metadata object to update against
     self._metadata = Metadata(None, None, None, None, None, None, None)
     
-    self.metadata_file = os.path.join(self.config_directory, 'metadata_file.pickle')
+    self.metadata_file = os.path.join(self.config_dir, 'metadata_file.pickle')
     self.backup_metadata_file = self.metadata_file + '.bak'
 
     try:
@@ -608,7 +615,7 @@ class Peer:
       key_path = self.public_key_file
     else:
       peer_filename = self.compute_safe_filename(peer_id)
-      key_path = os.path.join(self.peer_keys_directory, peer_filename+'.pem')
+      key_path = os.path.join(self.peer_keys_dir, peer_filename+'.pem')
     return key_path
   
   
@@ -632,7 +639,7 @@ class Peer:
       key_path = self.public_key_file
     else:
       store_filename = self.compute_safe_filename(store_id)
-      key_path = os.path.join(self.store_keys_directory, store_filename+'.pem')
+      key_path = os.path.join(self.store_keys_dir, store_filename+'.pem')
     return key_path
   
   
@@ -655,8 +662,8 @@ class Peer:
     if store_id == self.store_id:
       return self.own_store_directory
     
-    store_filename = self.compute_safe_filename(store_id)
-    return os.path.join(self.store_backups_directory, store_filename)
+    store_dirname = self.compute_safe_filename(store_id)
+    return os.path.join(self.remote_store_backups_dir, store_dirname)
     
     
   def compute_safe_filename(self, input_string):
@@ -1012,46 +1019,53 @@ class Peer:
     self.debug_print( (1, 'Change detected in own store. New signed revision number: {}'.format(revision_number)) )
     
     
-  def store_put_item(self, store_id, relative_path, file_contents=None):
+  def store_put_item(self, store_id, item_relative_path, file_contents=None):
     """
     Save a new directory or file, or update a file within a locally held store 
     (either the user's or a backup from another user).
     """ 
-    if relative_path[-1] == '/':
+    if item_relative_path[-1] == '/':
       isdir = True
     else:
       isdir = False
       
     if store_id == self.store_id:
       # Undo the path encryption done while creating our Merkle tree.
-      relative_path = self.decrypt_own_store_path(relative_path)
-      self.debug_print( [(2, 'relative_path (decrypted) = {}'.format(relative_path))] )
+      item_relative_path = self.decrypt_own_store_path(item_relative_path)
+      self.debug_print( [(2, 'item_relative_path (decrypted) = {}'.format(item_relative_path))] )
       # If a file, decrypt the contents
       if not isdir:
         file_contents = self.decrypt(file_contents)
         self.debug_print( [(5, 'file_contents (decrypted) = {}'.format(file_contents))] )
-        
-    path = os.path.join(self._get_store_path(store_id), relative_path)
+    
+    store_path = os.path.realpath(self._get_store_path(store_id))
+    item_path = os.path.realpath(os.path.join(store_path, item_relative_path))
+    
+    # Make sure that all changes are isolated to the contents of the specified store.
+    if os.path.commonprefix([item_path, store_path]) != store_path:
+      raise ValueError('Illegally attempted to create/update filesystem item "%(item_path)s"'
+                       ' which is not contained within its store directory "%(store_path)s.'
+                       % locals())
     
     if isdir:
       self.debug_print( [(1, 'Writing directory to store.')] )
 #                          (2, 'store_id = {}'.format(store_id))
-#                          (2, 'relative_path = {}'.format(relative_path))])
-      if not os.path.exists(path):
-        os.makedirs(path)
+#                          (2, 'item_relative_path = {}'.format(item_relative_path))])
+      if not os.path.exists(item_path):
+        os.makedirs(item_path)
     else:
       # Create subdirectory levels as needed.
-      file_directory = os.path.dirname(path)
+      file_directory = os.path.dirname(item_path)
       if not os.path.isdir(file_directory):
         os.makedirs(file_directory)
       
       self.debug_print( [(1, 'Writing file to store.')] )
 #                          (2, 'store_id = {}'.format(store_id))
-#                          (2, 'relative_path = {}'.format(relative_path)),
+#                          (2, 'item_relative_path = {}'.format(item_relative_path)),
 #                          (5, 'file_contents:'),
 #                          (5, file_contents)])
            
-      with open(path, 'w') as f:
+      with open(item_path, 'w') as f:
         f.write(file_contents)
 
 
@@ -1065,17 +1079,24 @@ class Peer:
       item_relative_path = self.decrypt_own_store_path(item_relative_path)
       self.debug_print( [(2, 'item_relative_path (decrypted) = {}'.format(item_relative_path))] )
       
-    path = os.path.join(self._get_store_path(store_id), item_relative_path)
+    store_path = os.path.realpath(self._get_store_path(store_id))
+    item_path = os.path.realpath(os.path.join(store_path, item_relative_path))
     
-    if os.path.isfile(path):
+    # Make sure that all changes are isolated to the contents of the specified store.
+    if os.path.commonprefix([item_path, store_path]) != store_path:
+      raise ValueError('Illegally attempted to delete filesystem item "%(item_path)s"'
+                       ' which is not contained within its store directory "%(store_path)s.'
+                       % locals())
+    
+    if os.path.isfile(item_path):
       self.debug_print( (1, 'Deleting file from store.') )
-      os.remove(path)
-    elif os.path.isdir(path):
+      os.remove(item_path)
+    elif os.path.isdir(item_path):
       self.debug_print( (1, 'Deleting directory (and contents) from store.') )
       # Note that this deletes the non-empty directories, so depending on the 
       #  ordering of delete items we might preemptively delete files or folders
       #  that still have pending delete requests.
-      shutil.rmtree(path)
+      shutil.rmtree(item_path)
 
 
   def decrypt_own_store_path(self, encrypted_relative_path):
@@ -2256,13 +2277,15 @@ def delete_old_configuration():
   """
   Delete old configuration data in preparation for initialization.
   """
-  if os.path.isdir(os.path.join(os.getcwd(),'.config')):
+  config_dir = os.path.isdir(os.path.join(os.getcwd(), CONFIG_DIR))
+  if config_dir:
     print 'Old configuration directory found. Deleting.'
-    shutil.rmtree(os.path.join(os.getcwd(),'.config'))
+    shutil.rmtree(config_dir)
   
-  if os.path.isdir(os.path.join(os.getcwd(),'.store_backups')):
-    print 'Old store backups directory found. Deleting.'
-    shutil.rmtree(os.path.join(os.getcwd(),'.store_backups'))
+  remote_store_backups_dir = os.path.isdir(os.path.join(os.getcwd(), REMOTE_STORE_BACKUPS_DIR))
+  if remote_store_backups_dir:
+    print 'Old remote store backups directory found. Deleting.'
+    shutil.rmtree(remote_store_backups_dir)
 
 
 def import_owner_configuration():
