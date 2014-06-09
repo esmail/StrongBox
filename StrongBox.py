@@ -28,12 +28,13 @@ import DirectoryMerkleTree
 import subprocess
 import argparse
 
+STORE_DIR = 'store'
+REMOTE_STORE_BACKUPS_DIR = '.remote_store_backups'
 CONFIG_DIR = '.config'
 KEY_SUBDIR = 'keys'
 OWN_KEYS_SUBDIR = 'own'
 PEER_KEYS_SUBDIR = 'peer'
 STORE_KEYS_SUBDIR = 'store'
-REMOTE_STORE_BACKUPS_DIR = '.remote_store_backups'
 
 
 # Named tuples have (immutable) class-like semantics for accessing fields, but are straightforward to pickle/unpickle.
@@ -70,7 +71,7 @@ class Peer:
   # These are the goods, implemented at a higher level than the lower methods.
 
   def __init__(self,
-               own_store_directory=None,
+               store_dir=None,
                debug_verbosity=0,
                root_directory=os.getcwd(),
                debug_preamble=None,
@@ -83,10 +84,10 @@ class Peer:
     """Initialize a `Peer` object."""
     
     # Set any incoming overrides
-    if own_store_directory:
-      self.own_store_directory = own_store_directory
+    if store_dir:
+      self.store_dir = store_dir
     else:
-      self.own_store_directory = os.path.join(os.getcwd(), 'store')
+      self.store_dir = os.path.join(os.getcwd(), 'store')
     if debug_verbosity:
       self.debug_verbosity = debug_verbosity
     else:
@@ -438,14 +439,17 @@ class Peer:
     Generate a peer's important configuration metadata upon first execution.
     """
     # TODO: Just do full initialization here (i.e. including revision and tree data).
-    
+    self.debug_print( (0, 'Creating initial configuration for peer.') )
     # Since we're doing initialization, make sure the store is empty for the first revision.
-    self.clear_own_store_contents()
+    store_contents = os.listdir(self.store_dir)
+    if store_contents:
+      raise EnvironmentError('Store directory \'%(store_dir)s\' must be empty prior to initial configuration.'
+                             % self.__dict__)
     
     peer_id = self.generate_peer_id()
     store_id = self.compute_store_id()
     network_address = self.get_public_network_address( )
-    merkle_tree = DirectoryMerkleTree.make_dmt(self.own_store_directory, encrypter=self)
+    merkle_tree = DirectoryMerkleTree.make_dmt(self.store_dir, encrypter=self)
     # Prepare and sign the initial revision data.
     revision_number = 1
     store_hash = merkle_tree.dmt_hash
@@ -505,8 +509,8 @@ class Peer:
     other peers' stores.
     """
     
-    if not os.path.exists(self.own_store_directory):
-      os.makedirs(self.own_store_directory)
+    if not os.path.exists(self.store_dir):
+      os.makedirs(self.store_dir)
     
     self.config_dir = os.path.join(self.root_directory, CONFIG_DIR)
     
@@ -602,9 +606,9 @@ class Peer:
         # Immediately write out to non-volatile storage since `update_metadata()` expects a pre-existing file to be made the backup.
         with open(self.metadata_file, 'w') as f:
           cPickle.dump(metadata, f)
-    finally:  
-      # Bring the new values into effect.
-      self.update_metadata(metadata)
+
+    # Bring the new values into effect.
+    self.update_metadata(metadata)
 
 
   def get_peer_key_path(self, peer_id):
@@ -660,7 +664,7 @@ class Peer:
     Unsafe reference to a store's absolute path meant for internal use only.
     """
     if store_id == self.store_id:
-      return self.own_store_directory
+      return self.store_dir
     
     store_dirname = self.compute_safe_filename(store_id)
     return os.path.join(self.remote_store_backups_dir, store_dirname)
@@ -964,7 +968,7 @@ class Peer:
     self.record_peer_data(peer_id, peer_data, True)
 
     
-  def update_own_store_revision(self, store_id, revision_data, lock=None):
+  def update_store_revision(self, store_id, revision_data, lock=None):
     """
     Increment the revision number and recalculate the corresponding hash and 
     revision signature for the current state of the user's store.
@@ -992,7 +996,7 @@ class Peer:
     new Merkle tree upon updates.
     """
     # Compute new Merkle tree from scratch.
-    new_merkle_tree = DirectoryMerkleTree.make_dmt(self.own_store_directory, encrypter=self)
+    new_merkle_tree = DirectoryMerkleTree.make_dmt(self.store_dir, encrypter=self)
     if (self.merkle_tree) and (self.merkle_tree == new_merkle_tree):
       return
     
@@ -1010,7 +1014,7 @@ class Peer:
     
     # Update our revision data for this store (and for our association to it).
     revision_data = RevisionData(revision_number=revision_number, store_hash=store_hash, signature=signature)
-    self.update_own_store_revision(self.store_id, revision_data)
+    self.update_store_revision(self.store_id, revision_data)
     
     # Also store the new Merkle tree.
     metadata = Metadata(self.peer_id, self.peer_dict, self.store_id, self.store_dict, self.encryption_key, self.aes_iv, new_merkle_tree)
@@ -1139,22 +1143,6 @@ class Peer:
     return file_contents
   
   
-  def clear_own_store_contents(self):
-    """
-    Remove any pre-existing data within the user's store directory in preparation 
-    for initiating a new initial configuration and new initial store.
-    """
-    store_contents = os.listdir(self.own_store_directory)
-    if store_contents:
-      delete_store_contents = raw_input('Store directory \'{}\' must be empty prior to first execution. Okay to delete? [y/n] '.format(self.own_store_directory))
-      
-      if not delete_store_contents == 'y':
-        raise IOError()
-      else:
-        shutil.rmtree(self.own_store_directory)
-        os.makedirs(self.own_store_directory)
-
-
   #########################
   # Cryptographic methods #
   #########################
@@ -1266,7 +1254,7 @@ class Peer:
     # The revision data's signature doesn't verify (we synced to a bad backup).
     if not self.verify_revision_data(store_id, peer_revision_data):
       self.debug_print( (1, 'WARNING: Synced to an invalid revision. Checks should have prevented this.') )
-      self.update_own_store_revision(store_id, INVALID_REVISION)
+      self.update_store_revision(store_id, INVALID_REVISION)
       return False
     
     calculated_hash = self.get_store_hash(store_id, fresh=True)
@@ -1277,7 +1265,7 @@ class Peer:
       if peer_revision_data != self.get_revision_data(self.peer_id, store_id):
         self.debug_print( [(1, 'New store contents verified by peer\'s signed revision data.'),
                            (1, 'Updating our revision data to signed revision {}.'.format(peer_revision_data.revision_number))] )
-        self.update_own_store_revision(store_id, peer_revision_data)
+        self.update_store_revision(store_id, peer_revision_data)
       return True
     
     # The sync failed.
@@ -1286,7 +1274,7 @@ class Peer:
       if (store_id != self.store_id) \
           or self.gt_revision_data(self.store_id, self.get_revision_data(peer_id, self.store_id), self.get_revision_data(self.peer_id, self.store_id)):
         self.debug_print( (1, 'Store contents could not be independently verified. Marking our revision as invalid.') )
-        self.update_own_store_revision(store_id, INVALID_REVISION)
+        self.update_store_revision(store_id, INVALID_REVISION)
         
       return False
 
@@ -1305,7 +1293,7 @@ class Peer:
     
     # Enact the change
     revision_data = self.sign_revision(revision_number, store_hash)
-    self.update_own_store_revision(self.store_id, revision_data)
+    self.update_store_revision(self.store_id, revision_data)
 
 
   def sign(self, payload):
@@ -1550,7 +1538,7 @@ class Peer:
     if message_id != message_ids['sync_complete_msg']:
       self.handle_unexpected_message(message_id, pickled_payload)
       self.debug_print( (1, 'Sync receive aborted due to messaging errors. Marking our copy of the store as invalid and disconnecting.') )
-      self.update_own_store_revision(sync_store_id, INVALID_REVISION)
+      self.update_store_revision(sync_store_id, INVALID_REVISION)
       self.send_disconnect_req(skt, 'Messaging errors during sync receipt.')
       raise ManualDisconnectException()
     
@@ -2257,33 +2245,31 @@ def run_peer_client_only(debug_verbosity=2):
   peer_client.check_store()
   peer_client.run_peer_client(3)
 
-def initialize_peer_configuration(own_store_directory=None, debug_verbosity=None):
+def initialize_peer_configuration(store_dir=None, debug_verbosity=None):
   """
   Generate new initial configuration data for this peer.
   """
-  if not own_store_directory:
-    own_store_directory=os.path.join(os.getcwd(), 'own_store')
+  if not store_dir:
+    store_dir=os.path.join(os.getcwd(), STORE_DIR)
   if not debug_verbosity:
     debug_verbosity=0
     
   delete_old_configuration()
-    
-  print 'Creating initial configuration for peer.'
-  Peer(own_store_directory=own_store_directory, debug_verbosity=debug_verbosity)
-  print 'Done.'
+
+  Peer(store_dir=store_dir, debug_verbosity=debug_verbosity)
   
 
 def delete_old_configuration():
   """
   Delete old configuration data in preparation for initialization.
   """
-  config_dir = os.path.isdir(os.path.join(os.getcwd(), CONFIG_DIR))
-  if config_dir:
+  config_dir= os.path.join(os.getcwd(), CONFIG_DIR)
+  if os.path.isdir(config_dir):
     print 'Old configuration directory found. Deleting.'
     shutil.rmtree(config_dir)
   
-  remote_store_backups_dir = os.path.isdir(os.path.join(os.getcwd(), REMOTE_STORE_BACKUPS_DIR))
-  if remote_store_backups_dir:
+  remote_store_backups_dir = os.path.join(os.getcwd(), REMOTE_STORE_BACKUPS_DIR)
+  if os.path.isdir(remote_store_backups_dir):
     print 'Old remote store backups directory found. Deleting.'
     shutil.rmtree(remote_store_backups_dir)
 
@@ -2302,7 +2288,7 @@ def import_owner_configuration():
   with open('strongbox_owner_config.pickle', 'r') as f:
     peer_id, _, network_address, public_key_contents, private_key_contents, aes_key = cPickle.load(f)
   
-  peer = Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity \
+  peer = Peer(store_dir=args.store_dir, debug_verbosity=args.debug_verbosity \
               , private_key_contents=private_key_contents, aes_key=aes_key)
   
   peer.import_backup_configuration(peer_id=peer_id, network_address=network_address, public_key_contents=public_key_contents)
@@ -2333,8 +2319,8 @@ unpicklers = {'handshake_msg'     : Peer.unpickle_handshake_msg,
               'public_key_msg'    : Peer.unpickle_public_key_msg
               }
 
-def main(own_store_directory=None, debug_verbosity=None):
-  peer = Peer(own_store_directory, debug_verbosity)
+def main(store_dir=None, debug_verbosity=None):
+  peer = Peer(store_dir, debug_verbosity)
   peer.run()
 
 if __name__ == '__main__':
@@ -2351,23 +2337,23 @@ if __name__ == '__main__':
 
   parser.add_argument('-d', '--debug-verbosity', default=0, type=int, help='Specify the verbosity of debugging messages.')
   # TODO: Optionally directing or "teeing" debug info to a log file would be nice, quite nice indeed.
-  parser.add_argument('--own-store', metavar='own_store_directory', dest='own_store_directory', default=None, help='Manually specify your store directory.')
+  parser.add_argument('--own-store', metavar='store_dir', dest='store_dir', default=None, help='Manually specify your store directory.')
   
   args = parser.parse_args()
   
   if args.init:
-    initialize_peer_configuration(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
+    initialize_peer_configuration(store_dir=args.store_dir, debug_verbosity=args.debug_verbosity)
   elif args.peer_client:
     run_peer_client_only()
   elif args.peer_server:
     run_peer_server_only()
   elif args.export_backup:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_backup_configuration()
+    Peer(store_dir=args.store_dir, debug_verbosity=args.debug_verbosity).export_backup_configuration()
   elif args.import_backup:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).import_backup_configuration()
+    Peer(store_dir=args.store_dir, debug_verbosity=args.debug_verbosity).import_backup_configuration()
   elif args.export_owner:
-    Peer(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity).export_owner_configuration()
+    Peer(store_dir=args.store_dir, debug_verbosity=args.debug_verbosity).export_owner_configuration()
   elif args.import_owner:
     import_owner_configuration()
   else:
-    main(own_store_directory=args.own_store_directory, debug_verbosity=args.debug_verbosity)
+    main(store_dir=args.store_dir, debug_verbosity=args.debug_verbosity)
