@@ -24,7 +24,7 @@ class StoredConfiguration():
                logger = None,
                encrypter = None,
                configuration_file = None,
-               own_store_directory = None,
+               store_dir = None,
                peer_id = None,
                peer_dict = None,
                store_id = None,
@@ -37,9 +37,9 @@ class StoredConfiguration():
     """
     self.logger = logger
     self.encrypter = encrypter
-    self.config_directory = config_directory
+    self.config_dir = config_directory
     self.configuration_file = configuration_file
-    self.own_store_directory = own_store_directory
+    self.store_dir = store_dir
     self.peer_id = peer_id
     self.peer_dict = peer_dict
     self.store_id = store_id
@@ -89,7 +89,7 @@ class StoredConfiguration():
 
   class StoredConfiguration_NamedTuple(
       namedtuple('_StoredConfiguration_NamedTuple' \
-                 , 'own_store_directory, peer_id, peer_dict, store_id, store_dict, encryption_key, merkle_tree')):
+                 , 'store_dir, peer_id, peer_dict, store_id, store_dict, encryption_key, merkle_tree')):
     """
     A class wrapper for `_StoredConfiguration_NamedTuple`. A `_StoredConfiguration_NamedTuple`
     contains only the configuration data from a `StoredConfiguration` object that 
@@ -103,17 +103,17 @@ class StoredConfiguration():
 
   @staticmethod
   def from_tuple(config_directory, logger, encrypter, stored_configuration_tuple):
-    own_store_directory, peer_id, peer_dict, store_id, store_dict, encryption_key, merkle_tree \
+    store_dir, peer_id, peer_dict, store_id, store_dict, encryption_key, merkle_tree \
         = stored_configuration_tuple
     stored_configuration = \
-        StoredConfiguration(config_directory, logger, encrypter, own_store_directory, peer_id \
+        StoredConfiguration(config_directory, logger, encrypter, store_dir, peer_id \
                             , peer_dict, store_id, store_dict, encryption_key, merkle_tree)
     return stored_configuration
   
   def to_tuple(self):
     stored_configuration_tuple = \
-        self.StoredConfiguration_NamedTuple(self.config_directory, self.logger, self.encrypter \
-                                       , self.own_store_directory, self.peer_id \
+        self.StoredConfiguration_NamedTuple(self.config_dir, self.logger, self.encrypter \
+                                       , self.store_dir, self.peer_id \
                                        , self.peer_dict, self.store_id, self.store_dict \
                                        , self.encryption_key, self.merkle_tree)
     return stored_configuration_tuple
@@ -147,9 +147,9 @@ class StoredConfiguration():
     # Selectively enact the updates while accumulating output to report.
     print_tuples = [(2, 'Updating stored configuration.')]
 
-    if (other.own_store_directory != None) and (other.own_store_directory != self.own_store_directory):
-      self.own_store_directory = other.own_store_directory
-      print_tuples.append( (2, 'own_store_directory = {}'.format([self.own_store_directory])) )
+    if (other.store_dir != None) and (other.store_dir != self.store_dir):
+      self.store_dir = other.store_dir
+      print_tuples.append( (2, 'store_dir = {}'.format([self.store_dir])) )
     if (other.peer_id != None) and (other.peer_id != self.peer_id):
       self.peer_id = other.peer_id
       print_tuples.append( (2, 'peer_id = {}'.format([self.peer_id])) )
@@ -347,7 +347,7 @@ class StoredConfiguration():
     self.record_peer_data(peer_id, peer_data)
 
 
-  def update_own_store_revision(self, store_id, revision_data, lock=None):
+  def update_store_revision(self, store_id, revision_data, lock=None):
     """
     Increment the revision number and recalculate the corresponding hash and 
     revision signature for the current state of the user's store.
@@ -371,9 +371,9 @@ class StoredConfiguration():
   def _compute_store_item_path(self, store_id, item_relative_path):
     """Compute the absolute path to an item within a particular store."""
     if store_id == self.store_id:
-      root_directory = self.own_store_directory
+      root_directory = self.store_dir
     else:
-      peer_backups_directory = PeerConfiguration.PeerConfiguration.compute_peer_backups_directory(self.config_directory)
+      peer_backups_directory = PeerConfiguration.PeerConfiguration.compute_peer_backups_directory(self.config_dir)
       store_dirname = Encrypter.Encrypter.compute_safe_filename(store_id)
       root_directory = os.path.join(peer_backups_directory, store_dirname)
     

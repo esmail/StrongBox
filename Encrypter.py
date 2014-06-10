@@ -16,11 +16,11 @@ class Encrypter():
     
     self.logger = logger
     self.encryption_key = encryption_key
-    self.config_directory = config_directory
+    self.config_dir = config_directory
     
     # Load or generate the private and public keys.
-    self.private_key = self.load_private_key(self.config_directory)
-    self.public_key = self.load_public_key(self.config_directory, self.private_key)
+    self.private_key = self.load_private_key(self.config_dir)
+    self.public_key = self.load_public_key(self.config_dir, self.private_key)
     
     # Set defaults and incoming overrides.
     if store_id is None:
@@ -81,7 +81,7 @@ class Encrypter():
     if store_id == self.store_id:
       store_key = self.public_key
     else:
-      store_key_file = PeerConfiguration.PeerConfiguration.get_foreign_store_key_file(store_id, self.config_directory)
+      store_key_file = PeerConfiguration.PeerConfiguration.get_foreign_store_key_file(store_id, self.config_dir)
       with open(store_key_file, 'r') as f:
         store_key = Crypto.PublicKey.RSA.importKey(f.read())
     
@@ -94,7 +94,7 @@ class Encrypter():
     if peer_id == self.peer_id:
       public_key = self.public_key
     else:
-      peer_key_file = PeerConfiguration.PeerConfiguration.get_foreign_peer_key_file(peer_id, self.config_directory)
+      peer_key_file = PeerConfiguration.PeerConfiguration.get_foreign_peer_key_file(peer_id, self.config_dir)
       with open(peer_key_file, 'r') as f:
         public_key = Crypto.PublicKey.RSA.importKey(f.read())
     return public_key  

@@ -66,9 +66,9 @@ class PeerConfiguration():
   # TODO: Figure out if there are cases where these directories should/shouldn't be erased.
   def initialize_directory_structure(self):
     peer_backups_directory = self.compute_peer_backups_directory()
-    keys_directory = self.compute_keys_directory(self.config_directory)
-    store_keys_directory = self.compute_store_keys_directory(self.config_directory)
-    peer_keys_directory = self.compute_peer_keys_directory(self.config_directory)
+    keys_directory = self.compute_keys_directory(self.config_dir)
+    store_keys_directory = self.compute_store_keys_directory(self.config_dir)
+    peer_keys_directory = self.compute_peer_keys_directory(self.config_dir)
     
     necessary_directories = [peer_backups_directory, keys_directory, store_keys_directory, peer_keys_directory]
     for directory in necessary_directories:
@@ -76,24 +76,6 @@ class PeerConfiguration():
         os.makedirs(directory)
 
     
-  @staticmethod
-  def clear_own_store_contents(own_store_directory):
-    """
-    Remove any pre-existing data within the user's store directory in preparation
-    for initiating a new initial configuration and new initial store.
-    """
-    store_contents = os.listdir(own_store_directory)
-    if store_contents:
-      # FIXME: It would be safer to just have the user manually delete the files on their own.
-      delete_store_contents = raw_input('Store directory \'{}\' must be empty prior to first execution. Okay to delete? [y/n] '.format(own_store_directory))
-
-      if not delete_store_contents == 'y':
-        raise IOError()
-      else:
-        shutil.rmtree(own_store_directory)
-        os.makedirs(own_store_directory)
-
-
   # FIXME NOW: Loading a previous stored configuration is key. Reformulate this around that activity.
   def __init__(self,
                root_directory = None,
@@ -101,7 +83,7 @@ class PeerConfiguration():
                encrypter = None,
                stored_configuration = None,
                configuration_file = None,
-               own_store_directory = None,
+               store_dir = None,
                peer_id = None,
                peer_dict = None,
                store_id = None,
@@ -114,11 +96,11 @@ class PeerConfiguration():
     if root_directory == None:
       root_directory = os.getcwd()
     self.root_directory = root_directory
-    self.config_directory = self.compute_config_directory()
+    self.config_dir = self.compute_config_directory()
     self.initialize_directory_structure()
     
     if configuration_file == None:
-      configuration_file = os.path.join(self.config_directory, 'configuration_file.pickle')
+      configuration_file = os.path.join(self.config_dir, 'configuration_file.pickle')
     self.configuration_file = configuration_file
     
     if logger == None:
@@ -130,16 +112,19 @@ class PeerConfiguration():
       
     # Now that we have our encryption key, instantiate a new `Encrypter` with it or supply it to the one provided.
     if encrypter == None:
-      encrypter = Encrypter.Encrypter(self.logger, encryption_key, self.config_directory, peer_id, store_id)
+      encrypter = Encrypter.Encrypter(self.logger, encryption_key, self.config_dir, peer_id, store_id)
     else:
       encrypter.encryption_key = encryption_key
     self.encrypter = encrypter
       
-    if own_store_directory is None:
-      own_store_directory = os.path.join(os.getcwd(), 'own_store')
-    self.own_store_directory = own_store_directory
+    if store_dir is None:
+      store_dir = os.path.join(os.getcwd(), 'own_store')
+    self.store_dir = store_dir
     # Since we're doing initialization, make sure the store is empty for the first revision.
-    self.clear_own_store_contents(own_store_directory)
+    store_contents = os.listdir(self.store_dir)
+    if store_contents:
+      raise EnvironmentError('Store directory \'%(store_dir)s\' must be empty prior to initial configuration.'
+                             % self.__dict__)
     
     if peer_id is None:
       peer_id = encrypter.peer_id
@@ -150,7 +135,7 @@ class PeerConfiguration():
     self.store_id = store_id
     
     if merkle_tree is None:
-      merkle_tree = DirectoryMerkleTree.make_dmt(own_store_directory, encrypter=encrypter)
+      merkle_tree = DirectoryMerkleTree.make_dmt(store_dir, encrypter=encrypter)
 
     # Prepare and sign the initial revision data.
     revision_number = 1
@@ -169,10 +154,10 @@ class PeerConfiguration():
     if stored_configuration is None:
       try:
         # FIXME: Will also want to set overridden attributes like `store_dict` given how this interface is shaping up (is that actually necessary)?
-        stored_configuration = StoredConfiguration.StoredConfiguration.load_stored_configuration(self.logger, self.encrypter, self.config_directory)
+        stored_configuration = StoredConfiguration.StoredConfiguration.load_stored_configuration(self.logger, self.encrypter, self.config_dir)
       except EnvironmentError:
-        stored_configuration = StoredConfiguration.StoredConfiguration(self.config_directory, logger, encrypter, configuration_file \
-                               , own_store_directory, peer_id, peer_dict, store_id \
+        stored_configuration = StoredConfiguration.StoredConfiguration(self.config_dir, logger, encrypter, configuration_file \
+                               , store_dir, peer_id, peer_dict, store_id \
                                , store_dict, encryption_key, merkle_tree)
     self.stored_configuration = stored_configuration
 
