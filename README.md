@@ -43,6 +43,9 @@ A revision of a store can be thought of as a cohesive state of the store at some
 A peer is a running instance of StrongBox, syncing its owner's store. StrongBox peers interact directly with one another. During communication, peers "gossip" to one another about the state of other peers to quickly disseminate information across the system. For example, peer A might gossip to peer B, "peer C doesn't have a valid revision of store X and needs an update," or "peer D just entered the system at network address Z and might be of interest to you." Through the course of communications, two peers will come to an agreement on which mutually held store they will sync on and what type of sync each will be undertaking (send, receive, or verify).
 
 
+#### Do You Want More?!!!??!
+Check out the Sphinx-generated API documentation [here](https://esmail.github.io/StrongBox/sphinx/html/index.html).
+
 ### What's missing?
 * A GUI!
 * A chain of trust or certificate signing authority and cryptographically sound peer verification checks. Currently a peer can be imitated, however the imitator would only gain access to encrypted data and would be unable to convince other peers to modify the state of any previously known store.
