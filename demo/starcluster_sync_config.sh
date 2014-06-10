@@ -1,5 +1,5 @@
 #!/bin/bash
-starcluster get strongbox_cluster --node master /root/strongbox_owner_config.pickle strongbox_duplication_config.pickle
+starcluster get strongbox_cluster --node master /root/strongbox_owner_config.pickle strongbox_owner_config.pickle
 starcluster put strongbox_cluster --node node001 strongbox_owner_config.pickle /root
 rm strongbox_owner_config.pickle
 
