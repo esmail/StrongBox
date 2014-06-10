@@ -27,6 +27,8 @@ import base64
 import DirectoryMerkleTree
 import subprocess
 import argparse
+import watchdog.observers.Observer as WdObserver
+import watchdog.events.FileSystemEventHandler as WdEventHandler
 
 VERSION= '0.1'
 
@@ -58,6 +60,16 @@ class ManualDisconnectException(Exception):
   """
   pass
 
+# TODO: Find a better place to put this ('utils.py'?)
+class DirectoryModificationHandler(WdFileSystemEventHandler):
+    def __init__(self, directory_modified_event_flag):
+        super(DirectoryModificationHandler, self).__init__()
+        self.directory_modified_event_flag = directory_modified_event_flag
+        
+    def on_any_event(file_system_event):
+        # TODO: Evntually might want to record the changed files to facilitate 
+        #   faster, partial Merkle tree regeneration.
+        self.directory_modified_event_flag.set()
 
 class Peer:
   """
@@ -74,11 +86,12 @@ class Peer:
   def __init__(self,
                store_dir=None,
                debug_verbosity=0,
-               root_directory=os.getcwd(),
+               root_directory=os.getcwd(), # FIXME
                debug_preamble=None,
                _metadata=None,
-               lock=threading.RLock(),
-               shutdown_signaled=threading.Event(),
+               lock=threading.RLock(), # FIXME: Only supposed to use immutable default values.
+               shutdown_signaled=threading.Event(), # FIXME
+               store_modified_event=None,
                private_key_contents=None,
                aes_key=None
                ):
@@ -102,6 +115,10 @@ class Peer:
 #     self.thread_exceptions = Queue.Queue()
     self.shutdown_signaled = shutdown_signaled
     
+    if store_modified_event == None:
+        store_modified_event= threading.Event()
+    self.store_modified_event= store_modified_event
+    
     self.initialize_directory_structure()
         
     self.initialize_keys(private_key_contents)
@@ -113,8 +130,14 @@ class Peer:
     """Start operating as a both a peer client and peer server in synchronized threads."""
     # Do preliminary updates before coming online
     self.update_network_address()
-    self.check_store()
-        
+    self.check_store(force=True)
+    
+    # Start observing the store for changes.
+    store_observer = WdObserver()
+    store_modification_handler = DirectoryModificationEventHandler(self.store_modified_event)
+    observer.schedule(store_modification_handler, self.store_dir, recursive=True)
+    observer.start()
+    
     peer_server_thread = threading.Thread(target=self.run_peer_server, args=())
     peer_server_thread.start()
 
@@ -125,6 +148,7 @@ class Peer:
     except (KeyboardInterrupt, SystemExit):
       self.shutdown_signaled.set()
       self.debug_print( (1, '\nShutdown signaled. Waiting for peer client and peer server threads to finish.') )
+      observer.stop()
       t_i = time.time()
       peer_client_thread.join(18)
       peer_server_thread.join(20-(time.time()-t_i))
@@ -134,7 +158,9 @@ class Peer:
           peer_client_thread._Thread__stop()
         if peer_server_thread.is_alive():
           peer_server_thread._Thread__stop()
-          
+      observer.join()
+
+# Retrieve any exceptions from the peer server and client threads.
 #       try:
 #         while True:
 #           etype, value, tb = self.thread_exceptions.get(block=False)
@@ -175,7 +201,7 @@ class Peer:
 #                 raise socket.timeout()
 
             # With lock in hand, check if there have been local changes to our store.
-            self.check_store() # TODO: This is an intensive operation. Instead watch the filesystem for changes and mark with a "dirty" flag.
+            self.check_store()
             
             skt_ssl = self.connect_to_peer(server_peer_id, socket_timeout)
             try:
@@ -958,7 +984,7 @@ class Peer:
     
     if not invalid:
       # Set the peer's revision for the store to match ours.
-      self.debug_print( (1, 'Syncing peer is now verified to hold revision {}'.format(our_revision.revision_number)) )
+      self.debug_print( (1, 'Syncing peer verified store revision {}.'.format(our_revision.revision_number)) )
       peer_store_revisions[store_id] = our_revision
     else:
       # Record the peer's revision for the store as `None`
@@ -991,14 +1017,20 @@ class Peer:
     self.update_metadata(metadata, True)
     
     
-  def check_store(self):
+  def check_store(self, force=False):
     """
     Check this peer's own store for changes generating new revision data and a 
     new Merkle tree upon updates.
     """
-    # Compute new Merkle tree from scratch.
+    # No need to check if `force` is not set and the store has not been marked as modified.
+    if (not force) and (not self.store_modified_event.is_set()):
+        return
+    
+    # Compute new Merkle tree from scratch and mark the store as unmodified.
     new_merkle_tree = DirectoryMerkleTree.make_dmt(self.store_dir, encrypter=self)
+    self.store_modified_event.clear()
     if (self.merkle_tree) and (self.merkle_tree == new_merkle_tree):
+      self.debug_print( (0, 'WARNING: Store marked as modified, but change no detected.'
       return
     
     old_revision_data = self.get_revision_data(self.peer_id, self.store_id)
@@ -1254,7 +1286,7 @@ class Peer:
     
     # The revision data's signature doesn't verify (we synced to a bad backup).
     if not self.verify_revision_data(store_id, peer_revision_data):
-      self.debug_print( (1, 'WARNING: Synced to an invalid revision. Checks should have prevented this.') )
+      self.debug_print( (1, 'WARNING: Synced to an unverifiable revision. Checks should have prevented this.') )
       self.update_store_revision(store_id, INVALID_REVISION)
       return False
     
@@ -1264,7 +1296,7 @@ class Peer:
     # We successfully synced.
     if calculated_hash == signed_hash:
       if peer_revision_data != self.get_revision_data(self.peer_id, store_id):
-        self.debug_print( [(1, 'New store contents verified by peer\'s signed revision data.'),
+        self.debug_print( [(1, 'New store contents verified by originator\'s signed revision data.'),
                            (1, 'Updating our revision data to signed revision {}.'.format(peer_revision_data.revision_number))] )
         self.update_store_revision(store_id, peer_revision_data)
       return True
@@ -1279,7 +1311,7 @@ class Peer:
         
       return False
 
-
+  # FIXME: This is never called! Put to use or remove.
   def increment_revision(self):
     """Create and record new revision data for the peer's own store."""
     
@@ -1549,6 +1581,9 @@ class Peer:
     self.debug_print( (1, 'All sync data received. Proceeding to cooperative verification.') )
     self.sync_check(skt, sender_peer_id, sync_store_id)
     
+    # If the sync checked out okay (no exceptions raised), mark the store as 
+    #   unmodified again.
+    self.store_modified_event.clear()
     
   def sync_send(self, skt, receiver_peer_id, sync_store_id):
     """Conduct a sync as the sending party."""
@@ -1640,7 +1675,7 @@ class Peer:
 
     # Locally verify the sync based on the signed revision data that we have recorded 
     #  for the syncing peer and update our revision number as needed.
-    if not self.verify_sync(sync_peer_id, sync_store_id):
+    if not self.verify_sync(sync_peer_id, sync_store_id)
       self.debug_print( (1, 'Local sync verification failed. Marking our copy of the store as invalid and disconnecting.') )
       self.send_disconnect_req(skt, 'Local sync verification failed.')
       raise ManualDisconnectException()
