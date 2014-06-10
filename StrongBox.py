@@ -28,6 +28,8 @@ import DirectoryMerkleTree
 import subprocess
 import argparse
 
+VERSION= '0.1'
+
 STORE_DIR = 'store'
 REMOTE_STORE_BACKUPS_DIR = '.remote_store_backups'
 CONFIG_DIR = '.config'
@@ -35,7 +37,6 @@ KEY_SUBDIR = 'keys'
 OWN_KEYS_SUBDIR = 'own'
 PEER_KEYS_SUBDIR = 'peer'
 STORE_KEYS_SUBDIR = 'store'
-
 
 # Named tuples have (immutable) class-like semantics for accessing fields, but are straightforward to pickle/unpickle.
 # The following types are for important data whose contents and format should be relatively stable at this point.
