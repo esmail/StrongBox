@@ -1,0 +1,918 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>StrongBox module &mdash; StrongBox 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="StrongBox 0.1 documentation" href="index.html" />
+    <link rel="next" title="test_DirectoryMerkleTree module" href="test_DirectoryMerkleTree.html" />
+    <link rel="prev" title="StoredConfiguration module" href="StoredConfiguration.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="test_DirectoryMerkleTree.html" title="test_DirectoryMerkleTree module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="StoredConfiguration.html" title="StoredConfiguration module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-StrongBox">
+<span id="strongbox-module"></span><h1>StrongBox module<a class="headerlink" href="#module-StrongBox" title="Permalink to this headline">¶</a></h1>
+<p>The StrongBox encrypted P2P backup program. Run <cite>python StrongBox.py -h</cite> for details on how to execute.</p>
+<dl class="exception">
+<dt id="StrongBox.ManualDisconnectException">
+<em class="property">exception </em><tt class="descclassname">StrongBox.</tt><tt class="descname">ManualDisconnectException</tt><a class="headerlink" href="#StrongBox.ManualDisconnectException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+<p>An exception for indicating manual disconnections which should not be treated as errors.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="StrongBox.Metadata">
+<em class="property">class </em><tt class="descclassname">StrongBox.</tt><tt class="descname">Metadata</tt><a class="headerlink" href="#StrongBox.Metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">tuple</span></tt></p>
+<p>Metadata(peer_id, peer_dict, store_id, store_dict, encryption_key, aes_iv, merkle_tree)</p>
+<dl class="attribute">
+<dt id="StrongBox.Metadata.aes_iv">
+<tt class="descname">aes_iv</tt><a class="headerlink" href="#StrongBox.Metadata.aes_iv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 5</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Metadata.encryption_key">
+<tt class="descname">encryption_key</tt><a class="headerlink" href="#StrongBox.Metadata.encryption_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 4</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Metadata.merkle_tree">
+<tt class="descname">merkle_tree</tt><a class="headerlink" href="#StrongBox.Metadata.merkle_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 6</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Metadata.peer_dict">
+<tt class="descname">peer_dict</tt><a class="headerlink" href="#StrongBox.Metadata.peer_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Metadata.peer_id">
+<tt class="descname">peer_id</tt><a class="headerlink" href="#StrongBox.Metadata.peer_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Metadata.store_dict">
+<tt class="descname">store_dict</tt><a class="headerlink" href="#StrongBox.Metadata.store_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Metadata.store_id">
+<tt class="descname">store_id</tt><a class="headerlink" href="#StrongBox.Metadata.store_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="StrongBox.Peer">
+<em class="property">class </em><tt class="descclassname">StrongBox.</tt><tt class="descname">Peer</tt><big>(</big><em>store_dir=None</em>, <em>debug_verbosity=0</em>, <em>root_directory='/media/seas/Documents/262/StrongBox/doc/source'</em>, <em>debug_preamble=None</em>, <em>_metadata=None</em>, <em>lock=&lt;_RLock owner=None count=0&gt;</em>, <em>shutdown_signaled=&lt;threading._Event object at 0x2001f10&gt;</em>, <em>private_key_contents=None</em>, <em>aes_key=None</em><big>)</big><a class="headerlink" href="#StrongBox.Peer" title="Permalink to this definition">¶</a></dt>
+<dd><p>The central component of StrongBox. A peer is the entity that tracks changes to 
+the user&#8217;s store and synchronizes backups with other peers.</p>
+<dl class="attribute">
+<dt id="StrongBox.Peer.aes_iv">
+<tt class="descname">aes_iv</tt><a class="headerlink" href="#StrongBox.Peer.aes_iv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.check_store">
+<tt class="descname">check_store</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.check_store" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check this peer&#8217;s own store for changes generating new revision data and a 
+new Merkle tree upon updates.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.compute_safe_filename">
+<tt class="descname">compute_safe_filename</tt><big>(</big><em>input_string</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.compute_safe_filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take any string of characters (e.g. the result of a SHA hash) and reversibly 
+convert it to a valid filename.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.compute_store_id">
+<tt class="descname">compute_store_id</tt><big>(</big><em>public_key=None</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.compute_store_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store IDs are meant to uniquely identify a store/user. They are essentially
+the RSA public key, but we use use their SHA-256 hash to &#8220;flatten&#8221; them to
+a shorter, predictable length.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.connect_to_peer">
+<tt class="descname">connect_to_peer</tt><big>(</big><em>peer_id</em>, <em>timeout=5</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.connect_to_peer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.create_listening_socket">
+<tt class="descname">create_listening_socket</tt><big>(</big><em>timeout=5</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.create_listening_socket" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.debug_print">
+<tt class="descname">debug_print</tt><big>(</big><em>print_tuples</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.debug_print" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optionally print based on the object&#8217;s verbosity setting and the required
+verbosity levels of the inputs. Taking input as a list of tuples allows 
+for multiple statements of differing verbosities to be dispatched from the 
+same call and be displayed under the same preamble and call stack (if any).</p>
+<p>Semantically, the levels are (currently) roughly:
+0: Minimal (default).
+1: Interesting info for demoing.
+2: Additionally print uglies such as hashes and ID strings that are of nearly-intelligible length.
+3: Additionally print noisy stuff like message receipts and larger data like peer and store dictionaries.
+4: &#8220;Oh shit, I have no idea where this bug is.&#8221; (Addtionally call stack and Merkle trees.)
+5: Additionally print file contents.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.debug_print_bad_message">
+<tt class="descname">debug_print_bad_message</tt><big>(</big><em>message_id</em>, <em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.debug_print_bad_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the type and contents from an unexpected message and (optionally) 
+print them out.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.decrypt">
+<tt class="descname">decrypt</tt><big>(</big><em>ciphertext</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.decrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrypt AES-encrypted data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.decrypt_filename">
+<tt class="descname">decrypt_filename</tt><big>(</big><em>safe_encrypted_filename</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.decrypt_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.decrypt_own_store_path">
+<tt class="descname">decrypt_own_store_path</tt><big>(</big><em>encrypted_relative_path</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.decrypt_own_store_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an encrypted, store-relative path to its original form.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.determine_sync_type">
+<tt class="descname">determine_sync_type</tt><big>(</big><em>peer_id</em>, <em>store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.determine_sync_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Figure out what type of synchronization (send, receive, or check) we&#8217;ll be 
+participating in.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.diff_store_to_merkle_tree">
+<tt class="descname">diff_store_to_merkle_tree</tt><big>(</big><em>store_id</em>, <em>mt_old</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.diff_store_to_merkle_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the difference between the current contents of the specified store 
+and those indicated by the older, provided Merkle tree.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.do_sync">
+<tt class="descname">do_sync</tt><big>(</big><em>skt</em>, <em>sync_type</em>, <em>peer_id</em>, <em>store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.do_sync" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initiate a &#8220;receive&#8221;, &#8220;send&#8221;, or &#8220;check&#8221; sync.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.encrypt">
+<tt class="descname">encrypt</tt><big>(</big><em>plaintext</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.encrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deterministically encrypt the input string using AES.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.encrypt_filename">
+<tt class="descname">encrypt_filename</tt><big>(</big><em>filename</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.encrypt_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.encryption_key">
+<tt class="descname">encryption_key</tt><a class="headerlink" href="#StrongBox.Peer.encryption_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The AES key used for encrypting a user&#8217;s store data before transmission.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.export_backup_configuration">
+<tt class="descname">export_backup_configuration</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.export_backup_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the (public) configuration data another peer would need to act as a backup for your store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.export_owner_configuration">
+<tt class="descname">export_owner_configuration</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.export_owner_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the (private) configuration data needed to access your store from another machine.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.generate_initial_metadata">
+<tt class="descname">generate_initial_metadata</tt><big>(</big><em>aes_key</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.generate_initial_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a peer&#8217;s important configuration metadata upon first execution.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.generate_peer_id">
+<tt class="descname">generate_peer_id</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.generate_peer_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a quasi-unique ID for this peer using a hash (SHA-256, which
+currently has no known collisions) of the owner&#8217;s public key &#8220;salted&#8221; with 
+32 random bits.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_merkle_tree">
+<tt class="descname">get_merkle_tree</tt><big>(</big><em>store_id</em>, <em>nonce=None</em>, <em>fresh=False</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_merkle_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the locally computed Merkle tree for a store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_peer_key">
+<tt class="descname">get_peer_key</tt><big>(</big><em>peer_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_peer_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to load a peer&#8217;s public key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_peer_key_path">
+<tt class="descname">get_peer_key_path</tt><big>(</big><em>peer_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_peer_key_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to compute the location of a peer&#8217;s recorded public key file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_public_network_address">
+<tt class="descname">get_public_network_address</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_public_network_address" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_revision_data">
+<tt class="descname">get_revision_data</tt><big>(</big><em>peer_id</em>, <em>store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function for retrieving a given peer&#8217;s revision data for a 
+given store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_store_hash">
+<tt class="descname">get_store_hash</tt><big>(</big><em>store_id</em>, <em>nonce=''</em>, <em>fresh=False</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_store_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve the overall hash value for the user&#8217;s store utilizing a nonce as needed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.get_store_key">
+<tt class="descname">get_store_key</tt><big>(</big><em>store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.get_store_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to load a store&#8217;s public key .</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.gt_revision_data">
+<tt class="descname">gt_revision_data</tt><big>(</big><em>store_id</em>, <em>revision_data_1</em>, <em>revision_data_2</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.gt_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns <cite>True</cite> if <cite>revision_data_1</cite> passes signature verification and either 
+is later than <cite>revision_data_2</cite> or that revision fails signature verification.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.handle_unexpected_message">
+<tt class="descname">handle_unexpected_message</tt><big>(</big><em>message_id</em>, <em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.handle_unexpected_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>See if the unexpected message was a disconnect request and respond accordingly.
+Otherwise, print the message contents and raise an exception.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.import_backup_configuration">
+<tt class="descname">import_backup_configuration</tt><big>(</big><em>config_file=None</em>, <em>peer_id=None</em>, <em>network_address=None</em>, <em>public_key_contents=None</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.import_backup_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import the (public) configuration data needed to act as a backup for another peer&#8217;s store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.increment_revision">
+<tt class="descname">increment_revision</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.increment_revision" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create and record new revision data for the peer&#8217;s own store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.initialize_directory_structure">
+<tt class="descname">initialize_directory_structure</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.initialize_directory_structure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the directories for storing configuration data and the backups of 
+other peers&#8217; stores.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.initialize_keys">
+<tt class="descname">initialize_keys</tt><big>(</big><em>private_key_contents</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.initialize_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import, load, or generate the private and public keys for the user and their store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.learn_peer_gossip">
+<tt class="descname">learn_peer_gossip</tt><big>(</big><em>gossip_peer_id</em>, <em>gossip_peer_dict</em>, <em>lock=False</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.learn_peer_gossip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update our knowledge of peers based on gossip from another peer.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.listening_port">
+<tt class="descname">listening_port</tt><em class="property"> = 51338</em><a class="headerlink" href="#StrongBox.Peer.listening_port" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.load_metadata_file">
+<tt class="descname">load_metadata_file</tt><big>(</big><em>aes_key</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.load_metadata_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load important configuration metadata that must be persisted to storage.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.manually_associate">
+<tt class="descname">manually_associate</tt><big>(</big><em>peer_id</em>, <em>network_address</em>, <em>public_key_file</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.manually_associate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manually associate with a peer and prepare to be a backup for that peer&#8217;s store.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.merkle_tree">
+<tt class="descname">merkle_tree</tt><a class="headerlink" href="#StrongBox.Peer.merkle_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <cite>DirectoryMerkleTree</cite> object containing the current state of the user&#8217;s store.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.metadata">
+<tt class="descname">metadata</tt><a class="headerlink" href="#StrongBox.Peer.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Important metadata about peers and stores. Access is controlled to ensure 
+that all changes are backed up to primary storage.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.network_address">
+<tt class="descname">network_address</tt><a class="headerlink" href="#StrongBox.Peer.network_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>The current network address of this peer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.peer_client_session">
+<tt class="descname">peer_client_session</tt><big>(</big><em>skt_ssl</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.peer_client_session" title="Permalink to this definition">¶</a></dt>
+<dd><p>The activities undertaken once connected to a peer server.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.peer_dict">
+<tt class="descname">peer_dict</tt><a class="headerlink" href="#StrongBox.Peer.peer_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>A mapping from the IDs of other peers who serve as backups to this peer to 
+important metadata such as their IP address and what revisions they had for 
+stores of interest upon last contact.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.peer_id">
+<tt class="descname">peer_id</tt><a class="headerlink" href="#StrongBox.Peer.peer_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>A quasi-unique identifier for this particular peer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.peer_server_session">
+<tt class="descname">peer_server_session</tt><big>(</big><em>skt_ssl</em>, <em>peer_address</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.peer_server_session" title="Permalink to this definition">¶</a></dt>
+<dd><p>The activities undertaken once a peer client has connected.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.receive">
+<tt class="descname">receive</tt><big>(</big><em>skt</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.receive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Low-level message receipt.  Checks the message&#8217;s protocol version, retrieves 
+only the necessary amount of data (to support consecutively sent messages), 
+and unpickles the message body.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.receive_expected_message">
+<tt class="descname">receive_expected_message</tt><big>(</big><em>skt</em>, <em>expected_message_type</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.receive_expected_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive a message, automatically handling situations where the message was 
+not of the type expected.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.record_peer_data">
+<tt class="descname">record_peer_data</tt><big>(</big><em>peer_id</em>, <em>peer_data</em>, <em>lock_acquired=False</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.record_peer_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the recorded metadata for an individual peer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.record_peer_pubkey">
+<tt class="descname">record_peer_pubkey</tt><big>(</big><em>peer_id</em>, <em>peer_public_key_string</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.record_peer_pubkey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to record a peer&#8217;s public key upon first encounter. The key is 
+subsequently used to verify SSL connections and signatures.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.record_store_pubkey">
+<tt class="descname">record_store_pubkey</tt><big>(</big><em>store_id</em>, <em>store_public_key_string</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.record_store_pubkey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to record a store&#8217;s public key upon association. The key is 
+subsequently used for signature verification.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.run">
+<tt class="descname">run</tt><big>(</big><em>client_sleep_time=5</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start operating as a both a peer client and peer server in synchronized threads.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.run_peer_client">
+<tt class="descname">run_peer_client</tt><big>(</big><em>sleep_time=1</em>, <em>socket_timeout=1</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.run_peer_client" title="Permalink to this definition">¶</a></dt>
+<dd><p>The peer client thread periodically reaches out to other peers to enact synchronizations.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.run_peer_server">
+<tt class="descname">run_peer_server</tt><big>(</big><em>socket_timeout=10</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.run_peer_server" title="Permalink to this definition">¶</a></dt>
+<dd><p>The peer server thread listens for and services connections from other peers.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.select_sync_peer">
+<tt class="descname">select_sync_peer</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.select_sync_peer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select which peer to sync with. This is done by randomly sampling from a 
+probability density function contains, in order of preference, peers with 
+newer revisions of our store or backups, peers with older revisions, peers 
+with whom we share a valid revision, and any other peers (peers that fall in
+a combination of these categories are also accordingly preferred).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.select_sync_store">
+<tt class="descname">select_sync_store</tt><big>(</big><em>peer_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.select_sync_store" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select which of a peer server&#8217;s stores to sync on.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send">
+<tt class="descname">send</tt><big>(</big><em>skt</em>, <em>message_id</em>, <em>message_data</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic message transmission wrapper that pickles the message to be sent, 
+prepends the protocol version and overall length, and dumps the data into 
+the socket.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_delete_file_msg">
+<tt class="descname">send_delete_file_msg</tt><big>(</big><em>skt</em>, <em>relative_path</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_delete_file_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_disconnect_req">
+<tt class="descname">send_disconnect_req</tt><big>(</big><em>skt</em>, <em>disconnect_message</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_disconnect_req" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_handshake_msg">
+<tt class="descname">send_handshake_msg</tt><big>(</big><em>skt</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_handshake_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_merkle_tree_msg">
+<tt class="descname">send_merkle_tree_msg</tt><big>(</big><em>skt</em>, <em>store_id</em>, <em>merkle_tree</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_merkle_tree_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_public_key_msg">
+<tt class="descname">send_public_key_msg</tt><big>(</big><em>skt</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_public_key_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_sync_complete_msg">
+<tt class="descname">send_sync_complete_msg</tt><big>(</big><em>skt</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_sync_complete_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_sync_req">
+<tt class="descname">send_sync_req</tt><big>(</big><em>skt</em>, <em>store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_sync_req" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_update_file_msg">
+<tt class="descname">send_update_file_msg</tt><big>(</big><em>skt</em>, <em>relative_path</em>, <em>file_contents</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_update_file_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_verify_sync_req">
+<tt class="descname">send_verify_sync_req</tt><big>(</big><em>skt</em>, <em>nonce</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_verify_sync_req" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.send_verify_sync_resp">
+<tt class="descname">send_verify_sync_resp</tt><big>(</big><em>skt</em>, <em>verification_hash</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.send_verify_sync_resp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple message transmission wrapper.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.sign">
+<tt class="descname">sign</tt><big>(</big><em>payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.sign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience primative for computing a signature for any string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.sign_revision">
+<tt class="descname">sign_revision</tt><big>(</big><em>revision_number</em>, <em>store_hash</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.sign_revision" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function for appending a signature to generated revision data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.store_delete_item">
+<tt class="descname">store_delete_item</tt><big>(</big><em>store_id</em>, <em>item_relative_path</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.store_delete_item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a file or directory from a locally held store (either the user&#8217;s or 
+a backup of another user&#8217;s store).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.store_dict">
+<tt class="descname">store_dict</tt><a class="headerlink" href="#StrongBox.Peer.store_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>A mapping from store IDs to important metadata such as this peer&#8217;s current 
+revision for the store and the IDs of peers known to be associated with the 
+store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.store_get_item_contents">
+<tt class="descname">store_get_item_contents</tt><big>(</big><em>store_id</em>, <em>item_relative_path</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.store_get_item_contents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the contents of a file (or return <cite>None</cite> for a directory) in preparation for
+transmission, recording on-the-fly if the item originates from the user&#8217;s store.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.Peer.store_id">
+<tt class="descname">store_id</tt><a class="headerlink" href="#StrongBox.Peer.store_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>A quasi-unique identifier for this peer&#8217;s store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.store_put_item">
+<tt class="descname">store_put_item</tt><big>(</big><em>store_id</em>, <em>item_relative_path</em>, <em>file_contents=None</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.store_put_item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a new directory or file, or update a file within a locally held store 
+(either the user&#8217;s or a backup from another user).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.sync_check">
+<tt class="descname">sync_check</tt><big>(</big><em>skt</em>, <em>sync_peer_id</em>, <em>sync_store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.sync_check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verify the other peer&#8217;s store data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.sync_receive">
+<tt class="descname">sync_receive</tt><big>(</big><em>skt</em>, <em>sender_peer_id</em>, <em>sync_store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.sync_receive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Conduct a sync as the receiving party.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.sync_send">
+<tt class="descname">sync_send</tt><big>(</big><em>skt</em>, <em>receiver_peer_id</em>, <em>sync_store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.sync_send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Conduct a sync as the sending party.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.test_client_handshake">
+<tt class="descname">test_client_handshake</tt><big>(</big><em>peer_address</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.test_client_handshake" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.test_client_ssl">
+<tt class="descname">test_client_ssl</tt><big>(</big><em>peer_address</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.test_client_ssl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.test_server_handshake">
+<tt class="descname">test_server_handshake</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.test_server_handshake" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.test_server_ssl">
+<tt class="descname">test_server_ssl</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.Peer.test_server_ssl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle">
+<tt class="descname">unpickle</tt><big>(</big><em>message_type</em>, <em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>&#8220;Demultiplex&#8221; a received message to its specific unpickling method.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_delete_file_msg">
+<tt class="descname">unpickle_delete_file_msg</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_delete_file_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_handshake_msg">
+<tt class="descname">unpickle_handshake_msg</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_handshake_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_merkle_tree_msg">
+<tt class="descname">unpickle_merkle_tree_msg</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_merkle_tree_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_public_key_msg">
+<tt class="descname">unpickle_public_key_msg</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_public_key_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_sync_complete_msg">
+<tt class="descname">unpickle_sync_complete_msg</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_sync_complete_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_sync_req">
+<tt class="descname">unpickle_sync_req</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_sync_req" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_update_file_msg">
+<tt class="descname">unpickle_update_file_msg</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_update_file_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_verify_sync_req">
+<tt class="descname">unpickle_verify_sync_req</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_verify_sync_req" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.unpickle_verify_sync_resp">
+<tt class="descname">unpickle_verify_sync_resp</tt><big>(</big><em>pickled_payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.unpickle_verify_sync_resp" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple wrapper for unpickling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.update_metadata">
+<tt class="descname">update_metadata</tt><big>(</big><em>metadata</em>, <em>lock_acquired=False</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.update_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>All updates to a peer&#8217;s stored metadata occur through this function so
+we can ensure that changes are backed up to primary storage before coming 
+into effect.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.update_network_address">
+<tt class="descname">update_network_address</tt><big>(</big><em>lock=False</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.update_network_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update this peer&#8217;s already existing IP address data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.update_peer_revision">
+<tt class="descname">update_peer_revision</tt><big>(</big><em>peer_id</em>, <em>store_id</em>, <em>invalid=False</em>, <em>lock=None</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.update_peer_revision" title="Permalink to this definition">¶</a></dt>
+<dd><p>After sending a peer synchronization data and verifying their store contents, 
+update our recording of their revision for the store in question to match 
+ours.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.update_store_revision">
+<tt class="descname">update_store_revision</tt><big>(</big><em>store_id</em>, <em>revision_data</em>, <em>lock=None</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.update_store_revision" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment the revision number and recalculate the corresponding hash and 
+revision signature for the current state of the user&#8217;s store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.verify">
+<tt class="descname">verify</tt><big>(</big><em>store_id</em>, <em>signature</em>, <em>payload</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.verify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience primative for verifying the signature associated with a string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.verify_revision_data">
+<tt class="descname">verify_revision_data</tt><big>(</big><em>store_id</em>, <em>revision_data</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.verify_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verify the signature of a received revision number.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StrongBox.Peer.verify_sync">
+<tt class="descname">verify_sync</tt><big>(</big><em>peer_id</em>, <em>store_id</em><big>)</big><a class="headerlink" href="#StrongBox.Peer.verify_sync" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check our newly syncronized store against the signed revision data that the 
+sync sender passed us.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="StrongBox.PeerData">
+<em class="property">class </em><tt class="descclassname">StrongBox.</tt><tt class="descname">PeerData</tt><a class="headerlink" href="#StrongBox.PeerData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">tuple</span></tt></p>
+<p>PeerData(network_address, store_revisions)</p>
+<dl class="attribute">
+<dt id="StrongBox.PeerData.network_address">
+<tt class="descname">network_address</tt><a class="headerlink" href="#StrongBox.PeerData.network_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.PeerData.store_revisions">
+<tt class="descname">store_revisions</tt><a class="headerlink" href="#StrongBox.PeerData.store_revisions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="StrongBox.RevisionData">
+<em class="property">class </em><tt class="descclassname">StrongBox.</tt><tt class="descname">RevisionData</tt><a class="headerlink" href="#StrongBox.RevisionData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">tuple</span></tt></p>
+<p>RevisionData(revision_number, store_hash, signature)</p>
+<dl class="attribute">
+<dt id="StrongBox.RevisionData.revision_number">
+<tt class="descname">revision_number</tt><a class="headerlink" href="#StrongBox.RevisionData.revision_number" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.RevisionData.signature">
+<tt class="descname">signature</tt><a class="headerlink" href="#StrongBox.RevisionData.signature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.RevisionData.store_hash">
+<tt class="descname">store_hash</tt><a class="headerlink" href="#StrongBox.RevisionData.store_hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="StrongBox.StoreData">
+<em class="property">class </em><tt class="descclassname">StrongBox.</tt><tt class="descname">StoreData</tt><a class="headerlink" href="#StrongBox.StoreData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">tuple</span></tt></p>
+<p>StoreData(revision_data, peers)</p>
+<dl class="attribute">
+<dt id="StrongBox.StoreData.peers">
+<tt class="descname">peers</tt><a class="headerlink" href="#StrongBox.StoreData.peers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="StrongBox.StoreData.revision_data">
+<tt class="descname">revision_data</tt><a class="headerlink" href="#StrongBox.StoreData.revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.delete_old_configuration">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">delete_old_configuration</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.delete_old_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete old configuration data in preparation for initialization.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.demo_A">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">demo_A</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.demo_A" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.demo_B">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">demo_B</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.demo_B" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.import_owner_configuration">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">import_owner_configuration</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.import_owner_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the (private) configuration file used to allow the owner to access 
+their store from another machine.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.initialize_peer_configuration">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">initialize_peer_configuration</tt><big>(</big><em>store_dir=None</em>, <em>debug_verbosity=None</em><big>)</big><a class="headerlink" href="#StrongBox.initialize_peer_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate new initial configuration data for this peer.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.main">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">main</tt><big>(</big><em>store_dir=None</em>, <em>debug_verbosity=None</em><big>)</big><a class="headerlink" href="#StrongBox.main" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.run_peer_client_only">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">run_peer_client_only</tt><big>(</big><em>debug_verbosity=2</em><big>)</big><a class="headerlink" href="#StrongBox.run_peer_client_only" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run in peer client mode only.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.run_peer_server_only">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">run_peer_server_only</tt><big>(</big><em>debug_verbosity=2</em><big>)</big><a class="headerlink" href="#StrongBox.run_peer_server_only" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run in peer server mode only.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.test_handshake">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">test_handshake</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.test_handshake" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="StrongBox.test_ssl">
+<tt class="descclassname">StrongBox.</tt><tt class="descname">test_ssl</tt><big>(</big><big>)</big><a class="headerlink" href="#StrongBox.test_ssl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="StoredConfiguration.html"
+                        title="previous chapter">StoredConfiguration module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="test_DirectoryMerkleTree.html"
+                        title="next chapter">test_DirectoryMerkleTree module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/StrongBox.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="test_DirectoryMerkleTree.html" title="test_DirectoryMerkleTree module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="StoredConfiguration.html" title="StoredConfiguration module"
+             >previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Esmail Fadae.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

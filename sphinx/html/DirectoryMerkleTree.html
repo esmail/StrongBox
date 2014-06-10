@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>DirectoryMerkleTree module &mdash; StrongBox 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="StrongBox 0.1 documentation" href="index.html" />
+    <link rel="next" title="Encrypter module" href="Encrypter.html" />
+    <link rel="prev" title="Communicator module" href="Communicator.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Encrypter.html" title="Encrypter module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Communicator.html" title="Communicator module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-DirectoryMerkleTree">
+<span id="directorymerkletree-module"></span><h1>DirectoryMerkleTree module<a class="headerlink" href="#module-DirectoryMerkleTree" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="DirectoryMerkleTree.DirectoryMerkleTree">
+<em class="property">class </em><tt class="descclassname">DirectoryMerkleTree.</tt><tt class="descname">DirectoryMerkleTree</tt><big>(</big><em>dmt_hash</em>, <em>children</em><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.DirectoryMerkleTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple tree implementation designed to contain Merkle tree information about 
+a directory or file.</p>
+<dl class="method">
+<dt id="DirectoryMerkleTree.DirectoryMerkleTree.compare_trees">
+<tt class="descname">compare_trees</tt><big>(</big><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.DirectoryMerkleTree.compare_trees" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="DirectoryMerkleTree.DirectoryMerkleTree.get_updated_tree">
+<tt class="descname">get_updated_tree</tt><big>(</big><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.DirectoryMerkleTree.get_updated_tree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="DirectoryMerkleTree.compute_tree_changes">
+<tt class="descclassname">DirectoryMerkleTree.</tt><tt class="descname">compute_tree_changes</tt><big>(</big><em>dmt_new</em>, <em>dmt_old</em>, <em>directory_path=''</em><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.compute_tree_changes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare the Merkle trees for two directories and return lists of the items 
+added, updated, and delted.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="DirectoryMerkleTree.get_all_paths">
+<tt class="descclassname">DirectoryMerkleTree.</tt><tt class="descname">get_all_paths</tt><big>(</big><em>dmt</em>, <em>directory_path=''</em><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.get_all_paths" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the relative paths to all of the contents of a directory Merkle tree.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="DirectoryMerkleTree.make_dmt">
+<tt class="descclassname">DirectoryMerkleTree.</tt><tt class="descname">make_dmt</tt><big>(</big><em>root_directory='/media/seas/Documents/262/StrongBox/doc/source'</em>, <em>nonce=''</em>, <em>encrypter=None</em><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.make_dmt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a Merkle tree object for the directory provided. The resulting Merkle 
+tree captures the state of the directory in the form of hierarchically 
+generated hashes of the directories contents. A nonce can optionally be provided 
+to facilitate remote verification of directory contents.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="DirectoryMerkleTree.print_tree">
+<tt class="descclassname">DirectoryMerkleTree.</tt><tt class="descname">print_tree</tt><big>(</big><em>tree</em><big>)</big><a class="headerlink" href="#DirectoryMerkleTree.print_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively print out the hash of the tree, the tree&#8217;s contents, and the 
+printed output from those contents.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Communicator.html"
+                        title="previous chapter">Communicator module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Encrypter.html"
+                        title="next chapter">Encrypter module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/DirectoryMerkleTree.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Encrypter.html" title="Encrypter module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Communicator.html" title="Communicator module"
+             >previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Esmail Fadae.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

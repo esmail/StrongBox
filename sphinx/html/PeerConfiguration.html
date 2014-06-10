@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>PeerConfiguration module &mdash; StrongBox 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="StrongBox 0.1 documentation" href="index.html" />
+    <link rel="next" title="StoredConfiguration module" href="StoredConfiguration.html" />
+    <link rel="prev" title="Logger module" href="Logger.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="StoredConfiguration.html" title="StoredConfiguration module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Logger.html" title="Logger module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-PeerConfiguration">
+<span id="peerconfiguration-module"></span><h1>PeerConfiguration module<a class="headerlink" href="#module-PeerConfiguration" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="PeerConfiguration.PeerConfiguration">
+<em class="property">class </em><tt class="descclassname">PeerConfiguration.</tt><tt class="descname">PeerConfiguration</tt><big>(</big><em>root_directory=None</em>, <em>logger=None</em>, <em>encrypter=None</em>, <em>stored_configuration=None</em>, <em>configuration_file=None</em>, <em>store_dir=None</em>, <em>peer_id=None</em>, <em>peer_dict=None</em>, <em>store_id=None</em>, <em>store_dict=None</em>, <em>encryption_key=None</em>, <em>merkle_tree=None</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration" title="Permalink to this definition">¶</a></dt>
+<dd><p>The configuration of a StrongBox peer.
+DESIGN TRADEOFF: Introducing an undesired level of access indirection (e.g. 
+<cite>peer_configuration.store_configuration.peer_id</cite> for the time being and putting 
+off creating a more convenient facade (which should be the eventual solution) 
+for the time being.</p>
+<dl class="method">
+<dt id="PeerConfiguration.PeerConfiguration.compute_config_directory">
+<tt class="descname">compute_config_directory</tt><big>(</big><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.compute_config_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="PeerConfiguration.PeerConfiguration.compute_keys_directory">
+<em class="property">static </em><tt class="descname">compute_keys_directory</tt><big>(</big><em>config_directory</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.compute_keys_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="PeerConfiguration.PeerConfiguration.compute_peer_backups_directory">
+<tt class="descname">compute_peer_backups_directory</tt><big>(</big><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.compute_peer_backups_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="PeerConfiguration.PeerConfiguration.compute_peer_keys_directory">
+<em class="property">classmethod </em><tt class="descname">compute_peer_keys_directory</tt><big>(</big><em>config_directory</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.compute_peer_keys_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="PeerConfiguration.PeerConfiguration.compute_store_keys_directory">
+<em class="property">classmethod </em><tt class="descname">compute_store_keys_directory</tt><big>(</big><em>config_directory</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.compute_store_keys_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="PeerConfiguration.PeerConfiguration.get_foreign_peer_key_file">
+<em class="property">classmethod </em><tt class="descname">get_foreign_peer_key_file</tt><big>(</big><em>peer_id</em>, <em>config_directory</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.get_foreign_peer_key_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="PeerConfiguration.PeerConfiguration.get_foreign_store_key_file">
+<em class="property">classmethod </em><tt class="descname">get_foreign_store_key_file</tt><big>(</big><em>store_id</em>, <em>config_directory</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.get_foreign_store_key_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to compute the location of another (not our own) 
+store&#8217;s recorded public key file.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="PeerConfiguration.PeerConfiguration.get_private_key_file">
+<em class="property">classmethod </em><tt class="descname">get_private_key_file</tt><big>(</big><em>config_directory</em><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.get_private_key_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="PeerConfiguration.PeerConfiguration.initialize_directory_structure">
+<tt class="descname">initialize_directory_structure</tt><big>(</big><big>)</big><a class="headerlink" href="#PeerConfiguration.PeerConfiguration.initialize_directory_structure" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Logger.html"
+                        title="previous chapter">Logger module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="StoredConfiguration.html"
+                        title="next chapter">StoredConfiguration module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/PeerConfiguration.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="StoredConfiguration.html" title="StoredConfiguration module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Logger.html" title="Logger module"
+             >previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Esmail Fadae.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

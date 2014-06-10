@@ -1,0 +1,231 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>test_DirectoryMerkleTree module &mdash; StrongBox 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="StrongBox 0.1 documentation" href="index.html" />
+    <link rel="next" title="test_StoredConfiguration module" href="test_StoredConfiguration.html" />
+    <link rel="prev" title="StrongBox module" href="StrongBox.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="test_StoredConfiguration.html" title="test_StoredConfiguration module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="StrongBox.html" title="StrongBox module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-test_DirectoryMerkleTree">
+<span id="test-directorymerkletree-module"></span><h1>test_DirectoryMerkleTree module<a class="headerlink" href="#module-test_DirectoryMerkleTree" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree">
+<em class="property">class </em><tt class="descclassname">test_DirectoryMerkleTree.</tt><tt class="descname">TestDirectoryMerkleTree</tt><big>(</big><em>methodName='runTest'</em><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">unittest.case.TestCase</span></tt></p>
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.deleted_dirs">
+<tt class="descname">deleted_dirs</tt><em class="property"> = set(['del_0/', 'del_1/'])</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.deleted_dirs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.deleted_files">
+<tt class="descname">deleted_files</tt><em class="property"> = set(['del_0/deleted_2', 'upd_2/deleted_1', 'deleted_0'])</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.deleted_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.get_parent_dirs">
+<em class="property">static </em><tt class="descname">get_parent_dirs</tt><big>(</big><em>path</em><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.get_parent_dirs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.modified_dir">
+<tt class="descname">modified_dir</tt><em class="property"> = 'modified'</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.modified_dir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.new_files">
+<tt class="descname">new_files</tt><em class="property"> = set(['upd_1/new_1', 'newdir_0/new_2', 'new_0'])</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.new_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.original_dir">
+<tt class="descname">original_dir</tt><em class="property"> = 'original'</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.original_dir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.setUpClass">
+<em class="property">classmethod </em><tt class="descname">setUpClass</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.setUpClass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.tearDownClass">
+<em class="property">classmethod </em><tt class="descname">tearDownClass</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.tearDownClass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_dir">
+<tt class="descname">test_dir</tt><em class="property"> = '.test_temp'</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_dir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_hash_determinism">
+<tt class="descname">test_hash_determinism</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_hash_determinism" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that a directory produces the same hash when a Merkle tree is made
+from it twice in a row.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_hash_inequality">
+<tt class="descname">test_hash_inequality</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_hash_inequality" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_determinism">
+<tt class="descname">test_tree_determinism</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_determinism" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that a directory produces the same Merkle tree twice in a row.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_deleted">
+<tt class="descname">test_tree_difference_deleted</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_deleted" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_new">
+<tt class="descname">test_tree_difference_new</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_unmodified">
+<tt class="descname">test_tree_difference_unmodified</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_unmodified" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_updated">
+<tt class="descname">test_tree_difference_updated</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_difference_updated" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_equality">
+<tt class="descname">test_tree_equality</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_equality" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test the implementation of the equality checking for the <cite>DirectoryMerkleTree</cite> class.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_inequality">
+<tt class="descname">test_tree_inequality</tt><big>(</big><big>)</big><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.test_tree_inequality" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.unmodified_files">
+<tt class="descname">unmodified_files</tt><em class="property"> = set(['unmod_0/unmodified_1', 'unmodified_0'])</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.unmodified_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.updated_empty_dirs">
+<tt class="descname">updated_empty_dirs</tt><em class="property"> = set(['upd_1'])</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.updated_empty_dirs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="test_DirectoryMerkleTree.TestDirectoryMerkleTree.updated_files">
+<tt class="descname">updated_files</tt><em class="property"> = set(['updated_0', 'upd_0/updated_1'])</em><a class="headerlink" href="#test_DirectoryMerkleTree.TestDirectoryMerkleTree.updated_files" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="StrongBox.html"
+                        title="previous chapter">StrongBox module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="test_StoredConfiguration.html"
+                        title="next chapter">test_StoredConfiguration module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/test_DirectoryMerkleTree.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="test_StoredConfiguration.html" title="test_StoredConfiguration module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="StrongBox.html" title="StrongBox module"
+             >previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Esmail Fadae.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

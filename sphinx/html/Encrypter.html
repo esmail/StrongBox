@@ -1,0 +1,228 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Encrypter module &mdash; StrongBox 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="StrongBox 0.1 documentation" href="index.html" />
+    <link rel="next" title="Logger module" href="Logger.html" />
+    <link rel="prev" title="DirectoryMerkleTree module" href="DirectoryMerkleTree.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Logger.html" title="Logger module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="DirectoryMerkleTree.html" title="DirectoryMerkleTree module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-Encrypter">
+<span id="encrypter-module"></span><h1>Encrypter module<a class="headerlink" href="#module-Encrypter" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="Encrypter.Encrypter">
+<em class="property">class </em><tt class="descclassname">Encrypter.</tt><tt class="descname">Encrypter</tt><big>(</big><em>logger</em>, <em>encryption_key</em>, <em>config_directory</em>, <em>peer_id=None</em>, <em>store_id=None</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="staticmethod">
+<dt id="Encrypter.Encrypter.compute_safe_filename">
+<em class="property">static </em><tt class="descname">compute_safe_filename</tt><big>(</big><em>input_string</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.compute_safe_filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take any string of characters (e.g. the result of a SHA hash) and reversibly 
+convert it to a valid filename.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.decrypt">
+<tt class="descname">decrypt</tt><big>(</big><em>ciphertext</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.decrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrypt AES-encrypted data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.decrypt_filename">
+<tt class="descname">decrypt_filename</tt><big>(</big><em>safe_encrypted_filename</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.decrypt_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.decrypt_own_store_path">
+<tt class="descname">decrypt_own_store_path</tt><big>(</big><em>encrypted_relative_path</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.decrypt_own_store_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert an encrypted, store-relative path to its original form.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.encrypt">
+<tt class="descname">encrypt</tt><big>(</big><em>plaintext</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.encrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deterministically encrypt the input string using AES.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.encrypt_filename">
+<tt class="descname">encrypt_filename</tt><big>(</big><em>filename</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.encrypt_filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="Encrypter.Encrypter.generate_encryption_key">
+<em class="property">static </em><tt class="descname">generate_encryption_key</tt><big>(</big><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.generate_encryption_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.generate_peer_id">
+<tt class="descname">generate_peer_id</tt><big>(</big><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.generate_peer_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a quasi-unique ID for this peer using a hash (SHA-256, which
+currently has no known collisions) of the owner&#8217;s public key &#8220;salted&#8221; with
+32 random bits.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.generate_store_id">
+<tt class="descname">generate_store_id</tt><big>(</big><em>public_key=None</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.generate_store_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store IDs are meant to uniquely identify a store/user. They are essentially
+the RSA public key, but we use use their SHA-256 hash to &#8220;flatten&#8221; them to
+a shorter, predictable length.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.get_signed_revision_data">
+<tt class="descname">get_signed_revision_data</tt><big>(</big><em>revision_number</em>, <em>store_hash</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.get_signed_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function for adding a signature to generated revision data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.load_peer_key">
+<tt class="descname">load_peer_key</tt><big>(</big><em>peer_id</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.load_peer_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to load a peer&#8217;s public key.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Encrypter.Encrypter.load_private_key">
+<em class="property">static </em><tt class="descname">load_private_key</tt><big>(</big><em>config_directory</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.load_private_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="Encrypter.Encrypter.load_public_key">
+<em class="property">classmethod </em><tt class="descname">load_public_key</tt><big>(</big><em>config_directory</em>, <em>private_key=None</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.load_public_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.load_store_key">
+<tt class="descname">load_store_key</tt><big>(</big><em>store_id</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.load_store_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to load a store&#8217;s public key .</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.sign">
+<tt class="descname">sign</tt><big>(</big><em>payload</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.sign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience primative for computing a signature for any string.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Encrypter.Encrypter.store_id">
+<tt class="descname">store_id</tt><a class="headerlink" href="#Encrypter.Encrypter.store_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.verify">
+<tt class="descname">verify</tt><big>(</big><em>store_id</em>, <em>signature</em>, <em>payload</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.verify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience primative for verifying the signature associated with a string.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Encrypter.Encrypter.verify_revision_data">
+<tt class="descname">verify_revision_data</tt><big>(</big><em>store_id</em>, <em>revision_data</em><big>)</big><a class="headerlink" href="#Encrypter.Encrypter.verify_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verify the validity and signature of revision data.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="DirectoryMerkleTree.html"
+                        title="previous chapter">DirectoryMerkleTree module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Logger.html"
+                        title="next chapter">Logger module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/Encrypter.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Logger.html" title="Logger module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="DirectoryMerkleTree.html" title="DirectoryMerkleTree module"
+             >previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Esmail Fadae.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

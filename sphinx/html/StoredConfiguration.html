@@ -1,0 +1,250 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>StoredConfiguration module &mdash; StrongBox 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="StrongBox 0.1 documentation" href="index.html" />
+    <link rel="next" title="StrongBox module" href="StrongBox.html" />
+    <link rel="prev" title="PeerConfiguration module" href="PeerConfiguration.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="StrongBox.html" title="StrongBox module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="PeerConfiguration.html" title="PeerConfiguration module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-StoredConfiguration">
+<span id="storedconfiguration-module"></span><h1>StoredConfiguration module<a class="headerlink" href="#module-StoredConfiguration" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="StoredConfiguration.StoredConfiguration">
+<em class="property">class </em><tt class="descclassname">StoredConfiguration.</tt><tt class="descname">StoredConfiguration</tt><big>(</big><em>config_directory=None</em>, <em>logger=None</em>, <em>encrypter=None</em>, <em>configuration_file=None</em>, <em>store_dir=None</em>, <em>peer_id=None</em>, <em>peer_dict=None</em>, <em>store_id=None</em>, <em>store_dict=None</em>, <em>encryption_key=None</em>, <em>merkle_tree=None</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains configuration data which must be preserved across executions of 
+StrongBox, and therefore is saved to storage. To maintain consistency and 
+since such writes to storage can be time consuming, this class&#8217;s interface 
+promotes batching small mutations together cohesively. Also note that 
+StrongBox is (currently) set up so only one thread accesses this data at a 
+time, therefore no access synchronization is attempted.</p>
+<dl class="class">
+<dt id="StoredConfiguration.StoredConfiguration.StoredConfiguration_NamedTuple">
+<em class="property">class </em><tt class="descname">StoredConfiguration_NamedTuple</tt><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.StoredConfiguration_NamedTuple" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">StoredConfiguration._StoredConfiguration_NamedTuple</span></tt></p>
+<p>A class wrapper for <cite>_StoredConfiguration_NamedTuple</cite>. A <cite>_StoredConfiguration_NamedTuple</cite>
+contains only the configuration data from a <cite>StoredConfiguration</cite> object that 
+should actually be saved to storage (e.g. not the <cite>encrypter</cite> attribute). 
+Using a named tuple allows us to pickle/unpickle and save/load the data with 
+explicit constraints on the order and number of attributes expected. This 
+should help catch potential saving and loading errors as we evolve the 
+<cite>StoredConfiguration</cite> class and its attribute list.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="StoredConfiguration.StoredConfiguration.from_tuple">
+<em class="property">static </em><tt class="descclassname">StoredConfiguration.</tt><tt class="descname">from_tuple</tt><big>(</big><em>config_directory</em>, <em>logger</em>, <em>encrypter</em>, <em>stored_configuration_tuple</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.from_tuple" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="StoredConfiguration.StoredConfiguration.get_configuration_file">
+<em class="property">static </em><tt class="descclassname">StoredConfiguration.</tt><tt class="descname">get_configuration_file</tt><big>(</big><em>config_directory</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.get_configuration_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.get_revision_data">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">get_revision_data</tt><big>(</big><em>peer_id</em>, <em>store_id</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.get_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenience function for retrieving a given peer&#8217;s revision data for a 
+given store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.gt_revision_data">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">gt_revision_data</tt><big>(</big><em>store_id</em>, <em>revision_data_1</em>, <em>revision_data_2</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.gt_revision_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>A revision is considered greater than another if its signature is valid and 
+either the other&#8217;s signature is not, or the other revision is numbered lower.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.learn_peer_gossip">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">learn_peer_gossip</tt><big>(</big><em>gossip_peer_id</em>, <em>gossip_peer_dict</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.learn_peer_gossip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update our knowledge of peers based on gossip from another peer.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="StoredConfiguration.StoredConfiguration.load_configuration_file">
+<em class="property">static </em><tt class="descclassname">StoredConfiguration.</tt><tt class="descname">load_configuration_file</tt><big>(</big><em>config_directory</em>, <em>logger</em>, <em>encrypter</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.load_configuration_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="StoredConfiguration.StoredConfiguration.load_stored_configuration">
+<em class="property">static </em><tt class="descclassname">StoredConfiguration.</tt><tt class="descname">load_stored_configuration</tt><big>(</big><em>logger</em>, <em>encrypter</em>, <em>config_directory</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.load_stored_configuration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempt to load a previously stored configuration file, instead trying the 
+backup copy if necessary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A <cite>StoredConfiguration</cite> object or <cite>None</cite> if neither file could be loaded.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.record_peer_data">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">record_peer_data</tt><big>(</big><em>peer_id</em>, <em>peer_data</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.record_peer_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record data on a new peer or update existing information on a known peer in 
+our stored configuration data. Also, accordingly make any necessary updates 
+to our recorded store-peer associations.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.save_to_file">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">save_to_file</tt><big>(</big><em>configuration_file=None</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.save_to_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.store_delete_item">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">store_delete_item</tt><big>(</big><em>store_id</em>, <em>item_relative_path</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.store_delete_item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a file or directory from a locally held store (either the user&#8217;s or 
+a backup of another user&#8217;s store).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.store_get_item_contents">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">store_get_item_contents</tt><big>(</big><em>store_id</em>, <em>item_relative_path</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.store_get_item_contents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the contents of a file (or return <cite>None</cite> for a directory) in preparation for
+transmission, decrypting on-the-fly if the item originates from the user&#8217;s store.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.store_put_item">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">store_put_item</tt><big>(</big><em>store_id</em>, <em>item_relative_path</em>, <em>file_contents=None</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.store_put_item" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a new directory or file, or update a file within a locally held store 
+(either the user&#8217;s own store or the backup of another store).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.to_tuple">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">to_tuple</tt><big>(</big><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.to_tuple" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.update_network_address">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">update_network_address</tt><big>(</big><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.update_network_address" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update this peer&#8217;s already existing IP address data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.update_peer_revision">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">update_peer_revision</tt><big>(</big><em>peer_id</em>, <em>store_id</em>, <em>invalid=False</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.update_peer_revision" title="Permalink to this definition">¶</a></dt>
+<dd><p>After sending a peer synchronization data and verifying their store contents, 
+update our recording of their revision for the store in question to match 
+our own.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="StoredConfiguration.StoredConfiguration.update_store_revision">
+<tt class="descclassname">StoredConfiguration.</tt><tt class="descname">update_store_revision</tt><big>(</big><em>store_id</em>, <em>revision_data</em>, <em>lock=None</em><big>)</big><a class="headerlink" href="#StoredConfiguration.StoredConfiguration.update_store_revision" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment the revision number and recalculate the corresponding hash and 
+revision signature for the current state of the user&#8217;s store.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="PeerConfiguration.html"
+                        title="previous chapter">PeerConfiguration module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="StrongBox.html"
+                        title="next chapter">StrongBox module</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/StoredConfiguration.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="StrongBox.html" title="StrongBox module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="PeerConfiguration.html" title="PeerConfiguration module"
+             >previous</a> |</li>
+        <li><a href="index.html">StrongBox 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Esmail Fadae.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
