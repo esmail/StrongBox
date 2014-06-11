@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-The StrongBox encrypted P2P backup program. Run `python StrongBox.py -h` for details on how to execute.
+The StrongBox encrypted P2P backup program. Run `./StrongBox.py -h` for details on how to execute.
 """
 
 import socket
@@ -27,8 +27,8 @@ import base64
 import DirectoryMerkleTree
 import subprocess
 import argparse
-import watchdog.observers.Observer as WdObserver
-import watchdog.events.FileSystemEventHandler as WdEventHandler
+import watchdog.observers as wd_observers
+import watchdog.events as wd_events
 
 VERSION= '0.1'
 
@@ -60,16 +60,18 @@ class ManualDisconnectException(Exception):
   """
   pass
 
+
 # TODO: Find a better place to put this ('utils.py'?)
-class DirectoryModificationHandler(WdFileSystemEventHandler):
-    def __init__(self, directory_modified_event_flag):
+class DirectoryModificationHandler(wd_events.FileSystemEventHandler):
+    def __init__(self, dir_modified_flag):
         super(DirectoryModificationHandler, self).__init__()
-        self.directory_modified_event_flag = directory_modified_event_flag
+        self.dir_modified_flag = dir_modified_flag
         
-    def on_any_event(file_system_event):
-        # TODO: Evntually might want to record the changed files to facilitate 
+    def on_any_event(self, file_system_event):
+        # TODO: Evntually might want to record the changes to facilitate 
         #   faster, partial Merkle tree regeneration.
-        self.directory_modified_event_flag.set()
+        self.dir_modified_flag.set()
+
 
 class Peer:
   """
@@ -86,38 +88,27 @@ class Peer:
   def __init__(self,
                store_dir=None,
                debug_verbosity=0,
-               root_directory=os.getcwd(), # FIXME
+               root_directory=None,
                debug_preamble=None,
                _metadata=None,
-               lock=threading.RLock(), # FIXME: Only supposed to use immutable default values.
-               shutdown_signaled=threading.Event(), # FIXME
-               store_modified_event=None,
+               lock=None,
+               shutdown_signaled=None,
+               store_modified_flag=None,
                private_key_contents=None,
                aes_key=None
                ):
     """Initialize a `Peer` object."""
     
-    # Set any incoming overrides
-    if store_dir:
-      self.store_dir = store_dir
-    else:
-      self.store_dir = os.path.join(os.getcwd(), 'store')
-    if debug_verbosity:
-      self.debug_verbosity = debug_verbosity
-    else:
-      self.debug_verbosity = 0
-      
-    # TODO: Clear these out if not going to be overridden.
-    self.root_directory = root_directory
+    # Set default or overridden attribute values.
+    self.store_dir= os.path.join(os.getcwd(), STORE_DIR) if (store_dir == None) else store_dir
+    self.debug_verbosity= debug_verbosity
+    self.root_directory = os.getcwd() if (root_directory == None) else root_directory
     self.debug_preamble = debug_preamble
     self._metadata = _metadata
-    self.lock = lock
+    self.lock = threading.RLock() if (lock == None) else lock
+    self.shutdown_signaled = threading.Event() if (shutdown_signaled == None) else shutdown_signaled
+    self.store_modified_flag= threading.Event() if (store_modified_flag == None) else store_modified_flag
 #     self.thread_exceptions = Queue.Queue()
-    self.shutdown_signaled = shutdown_signaled
-    
-    if store_modified_event == None:
-        store_modified_event= threading.Event()
-    self.store_modified_event= store_modified_event
     
     self.initialize_directory_structure()
         
@@ -133,10 +124,10 @@ class Peer:
     self.check_store(force=True)
     
     # Start observing the store for changes.
-    store_observer = WdObserver()
-    store_modification_handler = DirectoryModificationEventHandler(self.store_modified_event)
-    observer.schedule(store_modification_handler, self.store_dir, recursive=True)
-    observer.start()
+    store_modification_handler = DirectoryModificationHandler(self.store_modified_flag)
+    store_observer = wd_observers.Observer()
+    store_observer.schedule(store_modification_handler, self.store_dir, recursive=True)
+    store_observer.start()
     
     peer_server_thread = threading.Thread(target=self.run_peer_server, args=())
     peer_server_thread.start()
@@ -147,8 +138,8 @@ class Peer:
       time.sleep(2**30) # Just over 34 years.
     except (KeyboardInterrupt, SystemExit):
       self.shutdown_signaled.set()
-      self.debug_print( (1, '\nShutdown signaled. Waiting for peer client and peer server threads to finish.') )
-      observer.stop()
+      self.debug_print( (1, '\nSHUTDOWN SIGNALED.\nWaiting for peer client and peer server threads to finish.\n') )
+      store_observer.stop()
       t_i = time.time()
       peer_client_thread.join(18)
       peer_server_thread.join(20-(time.time()-t_i))
@@ -158,7 +149,7 @@ class Peer:
           peer_client_thread._Thread__stop()
         if peer_server_thread.is_alive():
           peer_server_thread._Thread__stop()
-      observer.join()
+      store_observer.join()
 
 # Retrieve any exceptions from the peer server and client threads.
 #       try:
@@ -1022,15 +1013,23 @@ class Peer:
     Check this peer's own store for changes generating new revision data and a 
     new Merkle tree upon updates.
     """
-    # No need to check if `force` is not set and the store has not been marked as modified.
-    if (not force) and (not self.store_modified_event.is_set()):
+    # If the `force` flag is set, mark the store as having been modified.
+    if force:
+      self.store_modified_flag.set()
+    
+    # No need to check if the store has not been marked as modified.
+    if not self.store_modified_flag.is_set():
         return
     
     # Compute new Merkle tree from scratch and mark the store as unmodified.
-    new_merkle_tree = DirectoryMerkleTree.make_dmt(self.store_dir, encrypter=self)
-    self.store_modified_event.clear()
-    if (self.merkle_tree) and (self.merkle_tree == new_merkle_tree):
-      self.debug_print( (0, 'WARNING: Store marked as modified, but change no detected.'
+    # If modifications occur between marking the store as unmodified and 
+    #   calculating the Merkle tree, try again.
+    while self.store_modified_flag.is_set():
+      self.store_modified_flag.clear()
+      new_merkle_tree = DirectoryMerkleTree.make_dmt(self.store_dir, encrypter=self)
+    
+    if (self.merkle_tree != None) and (self.merkle_tree == new_merkle_tree):
+      self.debug_print( (0, 'WARNING: Store marked as modified, but change no detected.') )
       return
     
     old_revision_data = self.get_revision_data(self.peer_id, self.store_id)
@@ -1583,7 +1582,7 @@ class Peer:
     
     # If the sync checked out okay (no exceptions raised), mark the store as 
     #   unmodified again.
-    self.store_modified_event.clear()
+    self.store_modified_flag.clear()
     
   def sync_send(self, skt, receiver_peer_id, sync_store_id):
     """Conduct a sync as the sending party."""
@@ -1675,7 +1674,7 @@ class Peer:
 
     # Locally verify the sync based on the signed revision data that we have recorded 
     #  for the syncing peer and update our revision number as needed.
-    if not self.verify_sync(sync_peer_id, sync_store_id)
+    if not self.verify_sync(sync_peer_id, sync_store_id):
       self.debug_print( (1, 'Local sync verification failed. Marking our copy of the store as invalid and disconnecting.') )
       self.send_disconnect_req(skt, 'Local sync verification failed.')
       raise ManualDisconnectException()

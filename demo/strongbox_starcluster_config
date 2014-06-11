@@ -42,5 +42,5 @@ TO_PORT = 51338
 
 [plugin strongbox]
 setup_class = starcluster.plugins.pypkginstaller.PyPkgInstaller
-packages = pycrypto
+packages = pycrypto, watchdog
 #           ,git+https://github.com/esmail/StrongBox.git
