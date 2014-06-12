@@ -1,0 +1,17 @@
+[report]
+run =
+# FIXME: Temporary override until StrongBox is made into a proper package.
+	.
+omit =
+	virtual_env/*
+	doc/*
+# FIXME: Temporary overrides until StrongBox is made into a proper package.
+	*argparse*
+	*bisect*
+	*ctypes*
+	*encodings*
+	*httplib*
+	*json*
+	*mimetools*
+	*rfc822*
+	*urllib2*

@@ -5,7 +5,7 @@ virtual_env/: requirements.txt
 	source virtual_env/bin/activate && pip install -r requirements.txt
 
 virtual_env/lib/python2.7/site-packages/nose/:
-	source virtual_env/bin/activate && pip install nose
+	source virtual_env/bin/activate && pip install -r test_reqs.txt
 
 test: virtual_env/ virtual_env/lib/python2.7/site-packages/nose/
 	source virtual_env/bin/activate && nosetests
