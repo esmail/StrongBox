@@ -1,5 +1,9 @@
 SHELL := /bin/bash
 
+doc: doc/gh-pages/ doc/gh-pages/sphinx/
+
+autodoc: .git/hooks/pre-commit doc/gh-pages
+
 virtual_env/: requirements.txt
 	virtualenv virtual_env
 	source virtual_env/bin/activate && pip install -r requirements.txt
@@ -10,11 +14,10 @@ virtual_env/lib/python2.7/site-packages/nose/:
 test: virtual_env/ virtual_env/lib/python2.7/site-packages/nose/
 	source virtual_env/bin/activate && nosetests
 
-autodoc: .git/hooks/pre-commit doc/gh-pages
-	# Symlink the Git pre-commit hook into place.
-	ln -s ../../git_hook_pre-commit.sh .git/hooks/pre-commit
-
-doc: doc/gh-pages/ doc/gh-pages/sphinx/
+.git/hooks/pre-commit: git_hook_pre-commit.sh
+	# Symlink the Git pre-commit hook into place
+	# TODO: Convert this ugly crap to a multi-liner that actually executes.
+	if [ ! -e .git/hooks/pre-commit ] ; then ln -s ../../git_hook_pre-commit.sh .git/hooks/pre-commit ; fi
 
 doc/gh-pages/:
 	# Set up the directory 'doc/gh-pages' as a git "workdir" that can contain a different branch of the repository.
@@ -30,3 +33,4 @@ virtual_env/lib/python2.7/site-packages/sphinx/: virtual_env/
 
 doc/gh-pages/sphinx/: virtual_env/lib/python2.7/site-packages/sphinx/ doc/source/*.rst doc/source/conf.py
 	source virtual_env/bin/activate && cd doc && make html # && make coverage # (Sphinx's coverage builder doesn't seem to actually do anything...)
+
