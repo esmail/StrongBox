@@ -1,4 +1,4 @@
-StrongBox
+StrongBox [![Build Status](https://travis-ci.org/esmail/StrongBox.svg?branch=master)](https://travis-ci.org/esmail/StrongBox)
 ============
 For execution help, run the command:
 ```bash
