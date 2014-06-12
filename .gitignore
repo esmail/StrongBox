@@ -48,4 +48,4 @@ doc/.doctrees
 doc/gh-pages
 demo/private_strongbox_starcluster_config
 demo/strongbox_starcluster_config
-
+virtual_env/
