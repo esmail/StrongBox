@@ -219,31 +219,3 @@ class DirectoryMerkleTree:
   def get_updated_tree(self):
     None
 
-if __name__ == '__main__':
-  # Tests
-  tree = make_dmt(os.path.join(os.getcwd(), 'personal/'))
-  print get_all_paths(tree)
-  print_tree(tree)
-  
-  # FIXME: These directories are no longer in the repository. Instead generate directories to compare.
-  tree_a = make_dmt(os.path.join(os.getcwd(), 'testA/'))
-  tree_b = make_dmt(os.path.join(os.getcwd(), 'testB/'))
-  
-  assert tree_a != tree_b
-  
-  changes_a_b = compute_tree_changes(tree_a, tree_b)
-  changes_b_a = compute_tree_changes(tree_b, tree_a)
-  print changes_a_b
-  print changes_b_a
-  
-  nonce = 'a testing nonce'
-  tree_a_nonced = make_dmt(os.path.join(os.getcwd(), 'testA/'), nonce=nonce)
-  tree_b_nonced = make_dmt(os.path.join(os.getcwd(), 'testB/'), nonce=nonce)
-  
-  assert tree_a_nonced == make_dmt(os.path.join(os.getcwd(), 'testA/'), nonce=nonce)
-  assert tree_a != tree_a_nonced
-  
-  changes_a_b_nonced = compute_tree_changes(tree_a_nonced, tree_b_nonced)
-  assert changes_a_b_nonced == changes_a_b
-  
-  print 'All tests passed!'
