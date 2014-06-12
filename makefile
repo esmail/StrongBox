@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 doc: doc/gh-pages/ doc/gh-pages/sphinx/
 
-autodoc: .git/hooks/pre-commit doc/gh-pages
+autodoc: .git/hooks/pre-commit doc
 
 virtual_env/: requirements.txt
 	virtualenv virtual_env
@@ -31,6 +31,6 @@ doc/source/%.rst: %.py
 virtual_env/lib/python2.7/site-packages/sphinx/: virtual_env/
 	source virtual_env/bin/activate && pip install sphinx
 
-doc/gh-pages/sphinx/: virtual_env/lib/python2.7/site-packages/sphinx/ doc/source/*.rst doc/source/conf.py
+doc/gh-pages/sphinx/: virtual_env/ virtual_env/lib/python2.7/site-packages/sphinx/ doc/source/*.rst doc/source/conf.py
 	source virtual_env/bin/activate && cd doc && make html # && make coverage # (Sphinx's coverage builder doesn't seem to actually do anything...)
 

@@ -2,7 +2,8 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+PARALLEL_JOBS = -j 4
+SPHINXOPTS    = $(PARALLEL_JOBS)
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = gh-pages/sphinx
@@ -54,6 +55,12 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
+## Esmail - 2014/06/10
+#coverage:
+#	$(SPHINXBUILD) -b coverage $(ALLSPHINXOPTS) $(BUILDDIR)/coverage
+#	@echo
+#	@echo "Build finished. The coverage output is in $(BUILDDIR)/coverage."
+  
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) $(BUILDDIR)/dirhtml
 	@echo
